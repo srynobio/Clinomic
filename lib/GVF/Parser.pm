@@ -5,7 +5,6 @@ use IO::File;
 
 extends 'GVF::Clin';
 
-
 use Data::Dumper;
 
 #------------------------------------------------------------------------------
@@ -18,7 +17,7 @@ sub pharmGKB_gene {
     if (! $request ) { croak "please add request\n";}
     
     my $gene_file = $self->get_directory . "/" . 'PharmGKB' . "/" . "genes.tsv";
-    my $gene_fh = IO::File->new($gene_file, 'r') || die "Can not open PharmGKB/gene.tsv file\n";
+    my $gene_fh   = IO::File->new($gene_file, 'r') || die "Can not open PharmGKB/gene.tsv file\n";
 
     my @pharm_gene;
     foreach my $lines ( <$gene_fh> ){
@@ -37,7 +36,7 @@ sub pharmGKB_gene {
         push @pharm_gene, $pharm_data;
     }
     # send data to populate the database
-    $self->populate_pharmgkb_gene(\@pharm_gene) if $request eq 'populate';
+    $self->_populate_pharmgkb_gene(\@pharm_gene) if $request eq 'populate';
     return (\@pharm_gene) if $request eq 'parse';
     
     $gene_fh->close;
@@ -46,13 +45,14 @@ sub pharmGKB_gene {
 #------------------------------------------------------------------------------
 
 sub pharmGKB_disease {
+    #my ( $self, $request, $drug_info ) = @_;
     my ( $self, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
 
     # uses the relationship file to collect disease information 
     my $relationship_file = $self->get_directory . "/" . 'PharmGKB' . "/" . "relationships.tsv";
-    my $relationship_fh = IO::File->new($relationship_file, 'r') || die "Can not open PharmGKB/relationships.tsv file\n";
+    my $relationship_fh   = IO::File->new($relationship_file, 'r') || die "Can not open PharmGKB/relationships.tsv file\n";
     
     my (@pharm_relationships, @drugs); 
     foreach my $lines ( <$relationship_fh> ){
@@ -64,12 +64,12 @@ sub pharmGKB_disease {
             = split /\t/, $lines;
         
         # grab gene id, not name
-        $entity1_id =~/(Gene)\:(.*)$/g;
+        $entity1_id =~ /(Gene)\:(.*)$/g;
         my $gene_id = $2;       
         
         if (! $gene_id ) { next }
         
-        # send none disease data to attribute to use later   
+        # send non disease data to attribute to use later   
         if ( $entity2_id !~ /Disease:/ ){
             my $drug = join('-', $entity2_id, $evidence, $gene_id, $entity2_name );
             push @drugs, $drug if $entity2_id =~ /Drug:/;
@@ -89,13 +89,15 @@ sub pharmGKB_disease {
         push @pharm_relationships, $pharm_disease;
     }
     # send data to populate the database
-    $self->populate_pharmgkb_disease(\@pharm_relationships) if $request eq 'populate';
+    $self->_populate_pharmgkb_disease(\@pharm_relationships) if $request eq 'populate';
 
     # send drug arrayref to use in drug db
     $self->_pharmGKB_drug_genes(\@drugs, 'populate') if $request eq 'populate';
     
     # or return if just want parsed data.
     return(\@pharm_relationships) if $request eq 'parse';
+    
+    #return(\@drugs) if $drug_info;
     
     $relationship_fh->close;    
 }
@@ -123,7 +125,7 @@ sub _pharmGKB_drug_genes {
         };
         push @drug_train, $drugs;
     }
-    $self->populate_pharmgkb_drug(\@drug_train) if $request eq 'populate';
+    $self->_populate_pharmgkb_drug(\@drug_train) if $request eq 'populate';
 }
 
 #------------------------------------------------------------------------------
@@ -135,9 +137,9 @@ sub pharmGKB_drugs {
 
     # uses the relationship file to collect disease information 
     my $drugs_file = $self->get_directory . "/" . 'PharmGKB' . "/" . "drugs.tsv";
-    my $drugs_fh = IO::File->new($drugs_file, 'r') || die "Can not open PharmGKB/drugs.tsv file\n";
+    my $drugs_fh   = IO::File->new($drugs_file, 'r') || die "Can not open PharmGKB/drugs.tsv file\n";
     
-    my ( @drug_file ); 
+    my @drug_file; 
     foreach my $lines ( <$drugs_fh> ){
         chomp $lines;
     
@@ -153,16 +155,36 @@ sub pharmGKB_drugs {
         push @drug_file, $drugs;
     }
     
-    # this method only has a return call, because half of the data generated
-    # from relationship file.
-    if ($request eq 'populate') { croak "Method pharmGKB_drugs is not used to populate a database, only parse\n"; }
+    #if ($request eq 'populate') { croak "Method pharmGKB_drugs is not used to populate a database, only parse\n"; }
+    
+    if ($request eq 'populate') { $self->_populate_drug_info; }
     return (\@drug_file) if $request eq 'parse'; 
+
     $drugs_fh->close;
 }
 
 #------------------------------------------------------------------------------
 
-
+sub omim {
+    
+    my ( $self, $request ) = @_;
+        
+    # uses the relationship file to collect disease information 
+    my $omim_file = $self->get_directory . "/" . 'OMIM' . "/" . "??????";
+    my $omim_fh   = IO::File->new($omim_file, 'r') || die "Can not open OMIM/???? file\n";
+    
+    my @omim_file; 
+    foreach my $lines ( <$omim_fh> ){
+        chomp $lines;
+    
+    
+    
+    
+    }
+    
+    
+    $omim_fh->close;
+}
 
 
 

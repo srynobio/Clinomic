@@ -14,16 +14,14 @@ my $user = {
 
 my $obj = GVF::Parser->new(
     data_directory => '/home/srynearson/GVF-Clin/data',
-    mysql_user           => $user,
+    mysql_user     => $user,
+    #build_database => 1,
 );
 
 
+#my $test = $obj->pharmGKB_drugs('parse');
 
-# call to build db.
-my $return = $obj->populate_drug_info;
-#print Dumper($return);
+#print Dumper($test);
 
-#$obj->pharmGKB_disease;
-
-
+    
 

@@ -1,4 +1,4 @@
-package GVF::DB::Mysql;
+package GVF::DB::MySQL;
 use Moose::Role;
 use Carp;
 
@@ -22,19 +22,14 @@ has 'mysql_dbx_handle' => (
     reader => 'get_mysql_dbxh',
 );
 
+has 'build_database' => (
+    is  => 'rw',
+    isa => 'Int',
+    trigger => \&_build_database,
+);
 
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
-#------------------------------------------------------------------------------
-
-sub load_database {
-    
-}
-
-
-
-
-
 #------------------------------------------------------------------------------
 
 sub _mysql_dbx_builder {
@@ -42,13 +37,34 @@ sub _mysql_dbx_builder {
     
     my $user = $self->get_mysql_user;
     
-    #my $dbixclass = GVF::DB::File->connect( 'dbi:mysql:GVF_DB_Variant', "$user->{'user'}", "$user->{passwd}" );
-    #$self->set_mysql_dbxh($dbixclass);
+    my $dbixclass = GVF::DB::File->connect( 'dbi:mysql:GVF_DB_Variant', "$user->{'user'}", "$user->{passwd}" );
+    $self->set_mysql_dbxh($dbixclass);
 }
 
 #------------------------------------------------------------------------------
 
-sub populate_pharmgkb_gene {
+sub _build_database {
+    my $self = shift;
+
+#=cut    
+    my $dbxh = $self->get_mysql_dbxh;
+    
+    # may have to add more detail
+    my $check = $dbxh->resultset('PharmGKB_gene');
+    
+    if ( $check ){ carp "Database already build"; }
+    else {
+        $self->pharmGKB_gene('populate');
+        $self->pharmGKB_disease('populate');
+        $self->pharmGKB_drugs('populate');
+    }
+    $dbxh->close;
+#=cut    
+
+}
+
+#------------------------------------------------------------------------------
+sub _populate_pharmgkb_gene {
     my ( $self, $data ) = @_;
 
 =cut    
@@ -70,7 +86,7 @@ sub populate_pharmgkb_gene {
 
 #------------------------------------------------------------------------------
 
-sub populate_pharmgkb_disease {
+sub _populate_pharmgkb_disease {
     my ( $self, $data ) = @_;
 
 =cut    
@@ -92,13 +108,13 @@ sub populate_pharmgkb_disease {
             });
         }
     }
-    #$dbxh->close;
+    $dbxh->close;
 =cut    
 }
 
 #------------------------------------------------------------------------------
 
-sub populate_pharmgkb_drug {
+sub _populate_pharmgkb_drug {
     my ( $self, $data ) = @_;
     
 =cut    
@@ -129,29 +145,39 @@ sub populate_pharmgkb_drug {
 
 #------------------------------------------------------------------------------
 
-sub populate_drug_info {
-    my ( $self, $data ) = @_;
+sub _populate_drug_info {
+    my ( $self, $drug_id ) = @_;
+
+=cut    
+    my $dbxh = $self->get_mysql_dbxh;
+
+    # populate with drug gene info with additional request.
+    my $drug_list  = $self->pharmGKB_drugs('parse');
     
-    my $gene_list = $self->pharmGKB_gene('parse');
-    my $drugs_list = $self->pharmGKB_drugs('parse');
-    
-    
-    foreach my $i ( @{$gene_list} ){
-        if ( $i eq $drug_list->)
-        #print $i->{'drug_info'}, "\n" if $i->{'drug_info'};
+    foreach my $i ( @{$drug_id} ){
+        if ( $i eq $drug_list->{'drug_id'} ) {
+            
+            #### the database will have to be changed to reflect
+            #### the change to reference info.
+            $dbxh->resultset('Drug_information')->create({
+                reference_info => $drug_list->{'drug_info'},
+                });
     }
-        
-    
-    
-    
-    
-    
-    
+    $dbxh->close;
+=cut
 }
 
+#------------------------------------------------------------------------------
 
+sub _populate_omim {
+    my ( $self, ) = @_;
+    
+    my $dbxh = $self->get_mysql_dbxh;
 
+    $dbxh->close;
+}
 
+#------------------------------------------------------------------------------
 
 1;
 
