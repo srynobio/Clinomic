@@ -2,6 +2,7 @@ package GVF::Utils;
 use Moose::Role;
 use Carp;
 
+use Data::Dumper;
 
 
 
@@ -9,8 +10,10 @@ use Carp;
 
 
 
+#------------------------------------------------------------------------------
 
 #Methods
+#------------------------------------------------------------------------------
 
 sub pharmgkb_word_alter {
     my ( $self, $word ) = @_;
@@ -41,7 +44,62 @@ sub pharmgkb_word_alter {
 }
 
 
+#------------------------------------------------------------------------------
 
+
+sub match_builder {
+    my ($self, $a, $b , $request ) = @_;
+    
+    if ( $request eq 'drug' ) {
+        my %seen;
+        foreach my $i ( @{$a} ){
+            $seen{$i->{'drug_id'}} = $i;
+        }
+        my @keeper;
+        foreach my $e ( @{$b} ) {
+            my $looking = $e->{'drug_id'};
+            if ( $seen{$looking} ) {
+                push @keeper, [$e->{'drug_info'}, $seen{$looking}->{'drug_id'}, $seen{$looking}->{'id'}];
+            }
+        }
+        return(@keeper);
+    }
+    elsif ( $request eq 'omim' ){
+        
+        my %seen;
+        foreach my $i ( @{$a} ){
+            if ( ! $i->{'omim'} ) { next }
+            $seen{$i->{'omim'}} = $i;
+        }
+        
+        my @keeper;
+        foreach my $e ( @{$b} ) {
+            my $looking = $e->{'omim_num'};
+            if ( $seen{$looking} ) {
+                push @keeper, [$e->{'status'}, $e->{'disease'}, $e->{'cyto'}, $seen{$looking}->{'id'}];
+            }
+        }
+        return(@keeper);
+    }
+    else {
+        my %seen;
+        foreach my $i ( @{$a} ){
+            $seen{$i->{'gene'}} = $i;
+        }
+    
+        my @keeper;
+        foreach my $e ( @{$b} ) {
+            my $looking = $e->{'gene_id'};
+            if ( $seen{$looking} ) {
+                push @keeper, [$e, $seen{$looking}->{'id'}];
+            }
+        }
+        return(@keeper);
+    }
+}
+
+
+#------------------------------------------------------------------------------
 
 
 

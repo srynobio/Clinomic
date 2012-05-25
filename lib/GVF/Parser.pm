@@ -45,7 +45,6 @@ sub pharmGKB_gene {
 #------------------------------------------------------------------------------
 
 sub pharmGKB_disease {
-    #my ( $self, $request, $drug_info ) = @_;
     my ( $self, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
@@ -97,8 +96,6 @@ sub pharmGKB_disease {
     # or return if just want parsed data.
     return(\@pharm_relationships) if $request eq 'parse';
     
-    #return(\@drugs) if $drug_info;
-    
     $relationship_fh->close;    
 }
 
@@ -130,7 +127,7 @@ sub _pharmGKB_drug_genes {
 
 #------------------------------------------------------------------------------
 
-sub pharmGKB_drugs {
+sub pharmGKB_drug_info {
     my ( $self, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
@@ -157,7 +154,7 @@ sub pharmGKB_drugs {
     
     #if ($request eq 'populate') { croak "Method pharmGKB_drugs is not used to populate a database, only parse\n"; }
     
-    if ($request eq 'populate') { $self->_populate_drug_info; }
+    if ($request eq 'populate') { $self->_populate_drug_info(\@drug_file); }
     return (\@drug_file) if $request eq 'parse'; 
 
     $drugs_fh->close;
@@ -170,28 +167,63 @@ sub omim {
     my ( $self, $request ) = @_;
         
     # uses the relationship file to collect disease information 
-    my $omim_file = $self->get_directory . "/" . 'OMIM' . "/" . "??????";
-    my $omim_fh   = IO::File->new($omim_file, 'r') || die "Can not open OMIM/???? file\n";
+    my $omim_file = $self->get_directory . "/" . 'OMIM' . "/" . "genemap";
+    my $omim_fh   = IO::File->new($omim_file, 'r') || die "Can not open OMIM/genemap file\n";
     
-    my @omim_file; 
-    foreach my $lines ( <$omim_fh> ){
-        chomp $lines;
-    
-    
-    
-    
+    my ( %mim_rec, @info_list );
+    foreach my $line ( <$omim_fh> ){
+        chomp $line;
+        
+        my ( undef, undef, undef, undef, $cyto_location, $symbol, $status, $title, undef, $mim_num, undef)
+            = split /\|/, $line;
+        
+        # split on , and space
+        my @genes = split /, /, $symbol;
+        $mim_rec{$mim_num} = [@genes];
+        
+        my $info = {
+            cyto     => $cyto_location,
+            status   => $status,
+            disease  => $title,
+            omim_num => $mim_num,
+        };
+        push @info_list, $info;
     }
-    
-    
     $omim_fh->close;
+
+    return (%mim_rec) if $request eq 'gene';
+    $self->_populate_omim_info(\@info_list) if $request eq 'populate';
 }
 
 
 
 
+=cut
+1  - Numbering system, in the format  Chromosome.Map_Entry_Number
+2  - Month entered
+3  - Day     "
+4  - Year    "
 
+    5  - Cytogenetic location
+    6  - Gene Symbol(s)
+    7  - Gene Status (see below for codes)
+    8  - Title
 
+9  - Title, cont.
 
+    10 - MIM Number
+
+11 - Method (see below for codes)
+12 - Comments
+13 - Comments, cont.
+14 - Disorders (each disorder is followed by its MIM number, if
+        different from that of the locus, and phenotype mapping method (see
+        below).  Allelic disorders are separated by a semi-colon.
+15 - Disorders, cont.
+16 - Disorders, cont.
+17 - Mouse correlate
+18 - Reference
+=cut
 
 
 

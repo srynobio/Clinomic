@@ -1,6 +1,7 @@
 package GVF::DB::MySQL;
 use Moose::Role;
 use Carp;
+use GVF::DB::Connect;
 
 use Data::Dumper;
 #-----------------------------------------------------------------------------
@@ -37,7 +38,7 @@ sub _mysql_dbx_builder {
     
     my $user = $self->get_mysql_user;
     
-    my $dbixclass = GVF::DB::File->connect( 'dbi:mysql:GVF_DB_Variant', "$user->{'user'}", "$user->{passwd}" );
+    my $dbixclass = GVF::DB::Connect->connect( 'dbi:mysql:GVFClin', "$user->{'user'}", "$user->{passwd}" );
     $self->set_mysql_dbxh($dbixclass);
 }
 
@@ -46,20 +47,19 @@ sub _mysql_dbx_builder {
 sub _build_database {
     my $self = shift;
 
-#=cut    
     my $dbxh = $self->get_mysql_dbxh;
-    
+
     # may have to add more detail
-    my $check = $dbxh->resultset('PharmGKB_gene');
+    my $check; #= $dbxh->resultset('PharmGKB_gene');
     
     if ( $check ){ carp "Database already build"; }
     else {
         $self->pharmGKB_gene('populate');
         $self->pharmGKB_disease('populate');
-        $self->pharmGKB_drugs('populate');
+        $self->pharmGKB_drug_info('populate');
+        $self->omim('populate');
     }
-    $dbxh->close;
-#=cut    
+    #$dbxh->close;
 
 }
 
@@ -67,117 +67,204 @@ sub _build_database {
 sub _populate_pharmgkb_gene {
     my ( $self, $data ) = @_;
 
-=cut    
+#=cut
     my $dbxh = $self->get_mysql_dbxh;
     
+    my %omim = $self->omim('gene');
+
+    my @omim_list;
+    while ( my ( $key, $value ) = each %omim ) {
+        foreach my $i ( @{$value} ){
+            my $omim_table = {
+                gene => $i,
+                omim => $key,
+            };
+            push @omim_list, $omim_table;
+        }
+    }
+ 
     foreach my $i ( @{$data} ){
-        chomp $i;
+        my $omim_num;
+        foreach my $e (@omim_list) {
+            if ( $i->{'gene_name'} eq $e->{'gene'} ){
+                $omim_num = $e->{'omim'};
+            }
+        }
         
-        $dbxh->resultset('PharmGKB_gene')->create({
+        $dbxh->resultset('PharmGkbGene')->create({
             gene_id   => $i->{'pharm_id'},
             symbol    => $i->{'gene_name'},
             gene_info => $i->{'gene_info'},
+            omim      => $omim_num,
         });
     }
-    $dbxh->close;
-=cut    
-
+    #$dbxh->close;
+#=cut
 }
 
 #------------------------------------------------------------------------------
 
 sub _populate_pharmgkb_disease {
     my ( $self, $data ) = @_;
-
-=cut    
+#=cut
     my $dbxh = $self->get_mysql_dbxh;
 
     # capture list of gene_id's
-    my @gene_id = $dbxh->resultset('PharmGKB_gene')->search( undef, {
-        columns => [qw/gene_id/],
-    });
- 
-    foreach my $gene ( @gene_id ){
-        if ( $gene eq $data->[0]->{'gene_id'} ) {
-            
-            # matches are added to db.
-            $dbxh->resultset('PharmGKB_disease')->create({
-                disease_name      => $data->[0]->{'disease_name'},
-                disease_id        => $data->[0]->{'disease_id'},
-                gene_disease_evid => $data->[0]->{'gene_disease_evid '},
-            });
-        }
+    my $gene_id = $dbxh->resultset('PharmGkbGene')->search (
+        undef, { columns => [qw/ gene_id id /], }
+    );
+    
+    my @gene_id_list;
+    while ( my $result = $gene_id->next ){
+        my $list = {
+            gene => $result->gene_id,
+            id   => $result->id,
+        };
+        push @gene_id_list, $list; 
     }
-    $dbxh->close;
-=cut    
+
+    # match the two above arrays.
+    my @match = $self->match_builder(\@gene_id_list, $data );
+    
+    # matches are added to db.
+    foreach my $i ( @match ) {
+        $dbxh->resultset('PharmGkbDisease')->create({
+            disease_name          => $i->[0]->{'disease_name'},
+            disease_id            => $i->[0]->{'disease_id'},
+            disease_gene_evidence => $i->[0]->{'gene_disease_evid'},
+            PharmGKB_gene_id      => $i->[1],
+        });
+    }
+    #$dbxh->close;
+#=cut    
 }
 
 #------------------------------------------------------------------------------
 
 sub _populate_pharmgkb_drug {
     my ( $self, $data ) = @_;
+#=cut    
     
-=cut    
     my $dbxh = $self->get_mysql_dbxh;
 
     # capture list of gene_id's
-    my @gene_id = $dbxh->resultset('PharmGKB_gene')->search( undef, {
-        columns => [qw/gene_id/],
-    });
+    my $gene_id = $dbxh->resultset('PharmGkbGene')->search(
+        undef, { columns => [qw/ gene_id id /], }
+    );
     
-    my @drug_id;        
-    foreach my $gene ( @gene_id ){
-        if ( $gene eq $data->[0]->{'gene_id'} ) {
-        
-            # matches are added to db.
-            $dbxh->resultset('PharmGKB_drug')->create({
-                drug_id        => $data->[0]->{'drug_id'},
-                drug_name      => $data->[0]->{'drug_name'},
-                gene_drug_evid => $data->[0]->{'gene_drug_evid'},
-            });
-            push @drug_id, $data->[0]->{'drug_id'};
-        }
+    my @gene_id_list;
+    while ( my $result = $gene_id->next ){
+        my $list = {
+            gene => $result->gene_id,
+            id   => $result->id,
+        };
+        push @gene_id_list, $list; 
     }
-    $self->populate_drug_info(\@drug_id);
-    $dbxh->close;
-=cut
+
+    # match the two above arrays.
+    my @match = $self->match_builder(\@gene_id_list, $data );
+
+    # matches are added to db.
+    foreach my $i ( @match ) {
+        $dbxh->resultset('PharmGkbDrug')->create({
+            drug_id            => $i->[0]->{'drug_id'},
+            drug_name          => $i->[0]->{'drug_name'},
+            drug_gene_evidence => $i->[0]->{'gene_drug_evid'},
+            PharmGKB_gene_id   => $i->[1],
+        });
+    }
+    #$dbxh->close;
+#=cut
 }    
 
 #------------------------------------------------------------------------------
 
 sub _populate_drug_info {
-    my ( $self, $drug_id ) = @_;
+    my ( $self, $drug_file ) = @_;
+#=cut    
 
-=cut    
     my $dbxh = $self->get_mysql_dbxh;
-
-    # populate with drug gene info with additional request.
-    my $drug_list  = $self->pharmGKB_drugs('parse');
     
-    foreach my $i ( @{$drug_id} ){
-        if ( $i eq $drug_list->{'drug_id'} ) {
-            
-            #### the database will have to be changed to reflect
-            #### the change to reference info.
-            $dbxh->resultset('Drug_information')->create({
-                reference_info => $drug_list->{'drug_info'},
-                });
+    # get drug_id from the database
+    my $drug_id = $dbxh->resultset('PharmGkbDrug')->search(
+        undef, { columns => [qw/ drug_id id /], }
+    );
+    
+    my @drug_id_list;
+    while ( my $result = $drug_id->next ){
+        my $list = {
+            drug_id => $result->drug_id,
+            id      => $result->id,
+        };
+        push @drug_id_list, $list; 
     }
-    $dbxh->close;
-=cut
+    
+    # match the two above arrays.
+    my @match = $self->match_builder( \@drug_id_list, $drug_file, 'drug' );  
+
+    foreach my $i ( @match ) {
+       $dbxh->resultset('DrugInformation')->create({
+            drug_id            => $i->[1],
+            drug_info          => $i->[0],
+            PharmGKB_drug_id   => $i->[2],
+        });
+    }
+    #$dbxh->close;
+#=cut    
 }
 
 #------------------------------------------------------------------------------
-
-sub _populate_omim {
-    my ( $self, ) = @_;
+sub _populate_omim_info {
+    my ( $self, $omim ) = @_;
     
     my $dbxh = $self->get_mysql_dbxh;
+    
+    # capture list of gene_id's
+    my $gene_id = $dbxh->resultset('PharmGkbGene')->search(
+        undef, { columns => [qw/ id omim /], }
+    );
+    
+    my @omim_id_list;
+    while ( my $result = $gene_id->next ){
+        my $list = {
+            omim => $result->omim,
+            id   => $result->id,
+        };
+        push @omim_id_list, $list; 
+    }
 
-    $dbxh->close;
+    my @match = $self->match_builder( \@omim_id_list, $omim, 'omim' );  
+    
+    foreach my $i ( @match ) {
+       $dbxh->resultset('Omiminformation')->create({
+            cytogenetic_location => $i->[2],
+            omim_disease => $i->[1],
+            status_code => $i->[0],
+            PharmGKB_gene_id => $i->[3],
+        });
+    }
 }
 
 #------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
 
 1;
 
