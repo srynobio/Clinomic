@@ -1,9 +1,8 @@
 package GVF::Parser;
-use Moose;
+use Moose::Role;
 use Carp;
 use IO::File;
 
-extends 'GVF::Clin';
 
 use Data::Dumper;
 
@@ -12,6 +11,7 @@ use Data::Dumper;
 #------------------------------------------------------------------------------
 
 sub pharmGKB_gene {
+
     my ( $self, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
@@ -45,6 +45,7 @@ sub pharmGKB_gene {
 #------------------------------------------------------------------------------
 
 sub pharmGKB_disease {
+
     my ( $self, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
@@ -104,6 +105,7 @@ sub pharmGKB_disease {
 # This method can only be used if pharmGKB_disease has been called first.
 
 sub _pharmGKB_drug_genes {
+
     my ( $self, $data, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
@@ -128,6 +130,7 @@ sub _pharmGKB_drug_genes {
 #------------------------------------------------------------------------------
 
 sub pharmGKB_drug_info {
+
     my ( $self, $request ) = @_;
     
     if (! $request ) { croak "please add request\n";}
@@ -195,36 +198,124 @@ sub omim {
     $self->_populate_omim_info(\@info_list) if $request eq 'populate';
 }
 
+#------------------------------------------------------------------------------
 
+sub rsidgene {
 
+    my ( $self, $request ) = @_;
+    
+    if (! $request ) { croak "please add request\n";}
 
-=cut
-1  - Numbering system, in the format  Chromosome.Map_Entry_Number
-2  - Month entered
-3  - Day     "
-4  - Year    "
+    # uses the relationship file to collect disease information 
+    my $rsid_file = $self->get_directory . "/" . 'PharmGKB' . "/" . "rsid.tsv";
+    my $rsid_fh   = IO::File->new($rsid_file, 'r') || die "Can not open PharmGKB/rsid.tsv file\n";
+    
+    my %snp;
+    foreach my $lines ( <$rsid_fh> ){
+        chomp $lines;
+        
+        if ( $lines !~ /^rs/) { next }
+        my ( $rsid, $gene_id, $symbol ) = split /\t/, $lines;
+        
+        my @genes = split /;/, $symbol;
+        
+        foreach my $name ( @genes ) {
+            $snp{$name} = [] unless exists $snp{$name};
+            push ( @{$snp{$name}}, $rsid );
+        }
+    }
 
-    5  - Cytogenetic location
-    6  - Gene Symbol(s)
-    7  - Gene Status (see below for codes)
-    8  - Title
+    my %connected;
+    while ( my ($key, $value) = each (%snp) ) {
+        
+        my $rs_values = join(':', @$value);        
+        $connected{$key} = $rs_values;        
+    }
+    $self->_populate_rsid(\%connected) if $request eq 'populate';
+    return(\%connected) if $request eq 'parse';
+}
 
-9  - Title, cont.
+#------------------------------------------------------------------------------
 
-    10 - MIM Number
+sub _build_feature_lines {
+    
+    my ( $self, $data ) = @_;
+    my $feature_line = $self->_file_splitter('feature');
+    
+    my ( @return_list );
+    foreach my $lines( @$feature_line ) {
+        chomp $lines;
+        
+        my ($seq_id, $source, $type, $start, $end, $score, $strand, $phase, $attribute) = split(/\t/, $lines);
+        my @attributes_list = split(/\;/, $attribute);
 
-11 - Method (see below for codes)
-12 - Comments
-13 - Comments, cont.
-14 - Disorders (each disorder is followed by its MIM number, if
-        different from that of the locus, and phenotype mapping method (see
-        below).  Allelic disorders are separated by a semi-colon.
-15 - Disorders, cont.
-16 - Disorders, cont.
-17 - Mouse correlate
-18 - Reference
-=cut
+        my %atts;
+        foreach my $attributes (@attributes_list) {
+            $attributes =~ /(.*)=(.*)/g;
+            $atts{$1} = $2;
+        }
+        
+        my $feature = {
+            seqid  => $seq_id,
+            source => $source,
+            type   => $type,
+            start  => $start,
+            end    => $end,
+            score  => $score,
+            strand => $strand,
+            phase  => $phase,
+            attribute => {
+                %atts
+            },
+        };
+        push @return_list, $feature;
+    }
 
+    my $per_correct = $self->gvf_valadate(\@return_list);
+    if ( $per_correct <=  80 ) { die "your file sucks\n";}
+    print $per_correct, "\n";
+    # send all data to populate db
+    #$self->_populate_gvf_data(\@return_list);
+}
 
+#------------------------------------------------------------------------------
 
+sub refgene {
+    
+    my ( $self, $request ) = @_;
+        
+    # uses the relationship file to collect disease information 
+    my $ref_file = $self->get_directory . "/" . 'UCSC' . "/" . "refGene.txt";
+    my $ref_fh   = IO::File->new($ref_file, 'r') || die "Can not open UCSC/refGene.txt file\n";
+    
+    my ( @mylist, %ref );
+    foreach my $line ( <$ref_fh> ){
+        chomp $line;
+        
+        my ( $bin, $name, $chrom, $strand, $txstart, $txend, undef, undef, undef, undef, undef, $score, $name2, undef)
+            = split (/\t/, $line);
+
+        $ref{$chrom} = {
+            symbol => $name2,
+            start  => $txstart,
+            end    => $txend,
+        };
+        #push @mylist, $list;
+    }
+    
+    # ???????????
+    
+    #my @new = sort { $a cmp $b }@mylist;
+    #my @new = sort { $ref{$a} cmp $ref{$b} } keys %ref;
+    #print Dumper(@new);
+}
+        
+#------------------------------------------------------------------------------
+        
+        
+        
+        
+        
+        
+        
 1;

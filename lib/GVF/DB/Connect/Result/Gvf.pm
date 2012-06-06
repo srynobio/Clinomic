@@ -1,4 +1,4 @@
-package GVF::DB::Connect::Result::GvfAttribute;
+package GVF::DB::Connect::Result::Gvf;
 use strict;
 use warnings;
 
@@ -7,12 +7,28 @@ use base qw/DBIx::Class::Core/;
 __PACKAGE__->load_components("InflateColumn::DateTime");
 
 
-__PACKAGE__->table("GVF_attributes");
+__PACKAGE__->table("GVF");
 
 
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_nullable => 0 },
+  "seqid",
+  { data_type => "varchar", is_nullable => 0, size => 45 },
+  "source",
+  { data_type => "varchar", is_nullable => 0, size => 45 },
+  "type",
+  { data_type => "varchar", is_nullable => 0, size => 45 },
+  "start",
+  { data_type => "integer", is_nullable => 0 },
+  "end",
+  { data_type => "integer", is_nullable => 0 },
+  "score",
+  { data_type => "varchar", is_nullable => 0, size => 45 },
+  "strand",
+  { data_type => "varchar", is_nullable => 0, size => 45 },
+  "phase",
+  { data_type => "varchar", is_nullable => 0, size => 45 },
   "attributes_id",
   { data_type => "varchar", is_nullable => 0, size => 45 },
   "alias",
@@ -53,13 +69,6 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 45 },
   "sequence_context",
   { data_type => "varchar", is_nullable => 1, size => 45 },
-  "GVF_features_id",
-  {
-    accessor       => "gvf_features_id",
-    data_type      => "integer",
-    is_foreign_key => 1,
-    is_nullable    => 0,
-  },
   "PharmGKB_gene_id",
   {
     accessor       => "pharm_gkb_gene_id",
@@ -72,21 +81,26 @@ __PACKAGE__->add_columns(
 
 __PACKAGE__->set_primary_key("id");
 
+__PACKAGE__->has_many(
+  "db_snps",
+  "Connect::Result::DbSnp",
+  { "foreign.GVF_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
 
-__PACKAGE__->belongs_to(
-  "gvf_feature",
-  "Connect::Result::GvfFeature",
-  { id => "GVF_features_id" },
-  { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
+__PACKAGE__->has_many(
+  "db_vars",
+  "Connect::Result::DbVar",
+  { "foreign.GVF_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
   "hgmd_attributes",
   "Connect::Result::HgmdAttribute",
-  { "foreign.GVF_attributes_id" => "self.id" },
+  { "foreign.GVF_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
-
 
 __PACKAGE__->belongs_to(
   "pharm_gkb_gene",

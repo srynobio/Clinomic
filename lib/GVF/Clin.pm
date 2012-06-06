@@ -1,10 +1,13 @@
 package GVF::Clin;
 use Moose;
+use Moose::Util::TypeConstraints;
 use Carp;
 
 with 'GVF::Roles';
 
 our $version = 'VERSION 0.01';
+
+use Data::Dumper;
 
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
@@ -16,6 +19,43 @@ has 'data_directory' => (
     required => 1,
     reader   => 'get_directory',
 );
+
+has 'gvf_file' => (
+    is       => 'rw',
+    isa      => 'Str', 
+    reader   => 'gvf_file',
+    writer   => 'set_gvf_file',
+    trigger  => \&_build_feature_lines,
+);
+
+has 'gene_names' => (
+    traits  => ['Array'],
+    is      => 'rw',
+    isa     => 'ArrayRef',
+    writer  => 'set_gene_name',
+    handles => {
+        get_gene_names => 'uniq',
+    },
+);
+
+has 'fasta_file' => (
+    is     => 'rw',
+    isa    => 'Str',
+    writer => 'set_fasta_file',
+    reader => 'get_fasta_file',
+);
+
+
+
+sub gvf_data {
+    my ( $self, $data, $request ) = @_;
+    
+    if ( ! $data->{'file'} && $data->{'fasta'} ) { die "Please correct file information $@\n"; }
+    if ( -z  $data->{'file'} ) { die "Your file appears to be empty\n"; }
+    
+    $self->set_fasta_file( $data->{'fasta'} );
+    $self->set_gvf_file( $data->{'file'} );
+}
 
 
 1;

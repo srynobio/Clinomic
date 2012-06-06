@@ -3,6 +3,7 @@ use Moose::Role;
 use Carp;
 use GVF::DB::Connect;
 
+
 use Data::Dumper;
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
@@ -24,10 +25,11 @@ has 'mysql_dbx_handle' => (
 );
 
 has 'build_database' => (
-    is  => 'rw',
-    isa => 'Int',
+    is         => 'rw',
+    isa        => 'Int',
     trigger => \&_build_database,
 );
+
 
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
@@ -48,26 +50,27 @@ sub _build_database {
     my $self = shift;
 
     my $dbxh = $self->get_mysql_dbxh;
-
-    # may have to add more detail
-    my $check; #= $dbxh->resultset('PharmGKB_gene');
     
-    if ( $check ){ carp "Database already build"; }
-    else {
+    my $id     = $dbxh->resultset('PharmGkbGene')->search;
+    my $check   = $id->get_column('id');
+    my $max_id = $check->max;
+
+    if ( ! $max_id ){
+
         $self->pharmGKB_gene('populate');
         $self->pharmGKB_disease('populate');
         $self->pharmGKB_drug_info('populate');
         $self->omim('populate');
-    }
-    #$dbxh->close;
+        $self->rsidgene('populate');
 
+    }
 }
 
 #------------------------------------------------------------------------------
+
 sub _populate_pharmgkb_gene {
     my ( $self, $data ) = @_;
 
-#=cut
     my $dbxh = $self->get_mysql_dbxh;
     
     my %omim = $self->omim('gene');
@@ -98,15 +101,13 @@ sub _populate_pharmgkb_gene {
             omim      => $omim_num,
         });
     }
-    #$dbxh->close;
-#=cut
 }
 
 #------------------------------------------------------------------------------
 
 sub _populate_pharmgkb_disease {
     my ( $self, $data ) = @_;
-#=cut
+
     my $dbxh = $self->get_mysql_dbxh;
 
     # capture list of gene_id's
@@ -135,15 +136,12 @@ sub _populate_pharmgkb_disease {
             PharmGKB_gene_id      => $i->[1],
         });
     }
-    #$dbxh->close;
-#=cut    
 }
 
 #------------------------------------------------------------------------------
 
 sub _populate_pharmgkb_drug {
     my ( $self, $data ) = @_;
-#=cut    
     
     my $dbxh = $self->get_mysql_dbxh;
 
@@ -173,15 +171,13 @@ sub _populate_pharmgkb_drug {
             PharmGKB_gene_id   => $i->[1],
         });
     }
-    #$dbxh->close;
-#=cut
 }    
 
 #------------------------------------------------------------------------------
 
 sub _populate_drug_info {
+
     my ( $self, $drug_file ) = @_;
-#=cut    
 
     my $dbxh = $self->get_mysql_dbxh;
     
@@ -209,12 +205,11 @@ sub _populate_drug_info {
             PharmGKB_drug_id   => $i->[2],
         });
     }
-    #$dbxh->close;
-#=cut    
 }
 
 #------------------------------------------------------------------------------
 sub _populate_omim_info {
+
     my ( $self, $omim ) = @_;
     
     my $dbxh = $self->get_mysql_dbxh;
@@ -236,25 +231,125 @@ sub _populate_omim_info {
     my @match = $self->match_builder( \@omim_id_list, $omim, 'omim' );  
     
     foreach my $i ( @match ) {
-       $dbxh->resultset('Omiminformation')->create({
+       $dbxh->resultset('OmimInformation')->create({
             cytogenetic_location => $i->[2],
-            omim_disease => $i->[1],
-            status_code => $i->[0],
-            PharmGKB_gene_id => $i->[3],
+            omim_disease         => $i->[1],
+            status_code          => $i->[0],
+            PharmGKB_gene_id     => $i->[3],
         });
     }
 }
 
 #------------------------------------------------------------------------------
 
+sub _populate_rsid {
+    my ( $self, $rsid ) = @_;
+    
+    my $dbxh = $self->get_mysql_dbxh;
 
+    # capture list of gene names and id's from db
+    my $gene_id = $dbxh->resultset('PharmGkbGene')->search(
+        undef, { columns => [qw/ id symbol /], }
+    );
+    
+    my @gene_list;
+    while ( my $result = $gene_id->next ){
+        my $list = {
+            gene => $result->symbol,
+            id   => $result->id,
+        };
+        push @gene_list, $list; 
+    }
 
+    foreach my $i ( @gene_list ){
+        
+        if ( ${ $rsid }{$i->{'gene'}} ) {
+            $dbxh->resultset('RsidGene')->create({
+                rsid             => ${ $rsid }{$i->{'gene'}},
+                gene_symbol      => $i->{'gene'},
+                PharmGKB_gene_id => $i->{'id'},
+            });
+        }
+    }
+}
 
+#------------------------------------------------------------------------------
 
+sub _populate_gvf_data {
 
+    my ( $self, $data ) = @_;
 
-
-
+    my $dbxh = $self->get_mysql_dbxh;
+    
+    # make a list of gene names
+    my @gene_names = map {
+        my $gene = $_->{'attribute'}->{'Variant_effect'};
+        $gene =~ m/(\w+)\s+(\d+)\s+(gene)\s+(\w+)/gi;
+        $4;
+    } @$data;
+    
+    # capture list of gene names and id's from db
+    my $gene_id = $dbxh->resultset('PharmGkbGene')->search(
+        undef, { columns => [qw/ id symbol /], }
+    );
+    
+    my @gene_list;
+    while ( my $result = $gene_id->next ){
+        my $list = {
+            gene => $result->symbol,
+            id   => $result->id,
+        };
+        push @gene_list, $list; 
+    }    
+    
+    # genetate a match of gene list and db
+    my %gene = $self->match_builder( \@gene_names, \@gene_list, 'gvf' );  
+    
+    # build db
+    foreach my $i ( @{$data} ) {
+        chomp $i;
+        
+        my $variant_effect = $i->{'attribute'}->{'Variant_effect'};
+        if ( ! $variant_effect ) { next }
+        if ( $variant_effect !~ /(\bgene\b)/ ) { next }
+    
+        $variant_effect =~ m/(\w+)\s+(\d+)\s+(gene)\s+(\w+)/gi;
+    
+        
+        if ( $gene{$4} ) {
+            $dbxh->resultset('Gvf')->create({
+                seqid             => $i->{'seqid'},
+                source            => $i->{'source'},
+                type              => $i->{'type'},
+                start             => $i->{'start'},
+                end               => $i->{'end'},
+                score             => $i->{'score'},
+                strand            => $i->{'strand'},                
+                attributes_id     => $i->{'attribute'}->{'ID'},
+                alias             => $i->{'attribute'}->{'Alias'},
+                dbxref            => $i->{'attribute'}->{'Dbxref'},
+                variant_seq       => $i->{'attribute'}->{'Variant_seq'},
+                reference_seq     => $i->{'attribute'}->{'Reference_seq'},
+                variant_reads     => $i->{'attribute'}->{'Variant_reads'},
+                total_reads       => $i->{'attribute'}->{'Total_reads'},
+                zygosity          => $i->{'attribute'}->{'Zygosity'},
+                variant_freq      => $i->{'attribute'}->{'Variant_freq'},
+                variant_effect    => $i->{'attribute'}->{'Variant_effect'},
+                start_range       => $i->{'attribute'}->{'Start_range'},
+                end_range         => $i->{'attribute'}->{'End_range'},
+                phased            => $i->{'attribute'}->{'Phased'},
+                genotype          => $i->{'attribute'}->{'Genotype'},
+                individual        => $i->{'attribute'}->{'Individual'},
+                variant_codon     => $i->{'attribute'}->{'Variant_codon'},
+                reference_codon   => $i->{'attribute'}->{'Reference_codon'},
+                variant_aa        => $i->{'attribute'}->{'Variant_aa'},
+                breakpoint_detail => $i->{'attribute'}->{'Breakpoint_detail'},
+                sequence_context  => $i->{'attribute'}->{'Sequence_context'},
+                PharmGKB_gene_id  => $gene{$4},
+            });
+        }
+    }
+}
 
 #------------------------------------------------------------------------------
 

@@ -2,17 +2,13 @@ package GVF::Utils;
 use Moose::Role;
 use Carp;
 
+use Bio::DB::Fasta;
 use Data::Dumper;
 
 
 
-
-
-
-
 #------------------------------------------------------------------------------
-
-#Methods
+#----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
 
 sub pharmgkb_word_alter {
@@ -32,24 +28,16 @@ sub pharmgkb_word_alter {
     $word =~ s/^(\w+-\w+)(,)(\s)(\w+-\w+)$/$4 $1/g;
     $word =~ s/^(\w+)(\s)(\w+)(,)(\s)(\w+)(,)(\s)(\w+)$/$6 $9 $1 $3/g;
 
-
-
-
-
-
-
-
-
     print $word, "\n";
 }
 
-
 #------------------------------------------------------------------------------
 
-
 sub match_builder {
+
     my ($self, $a, $b , $request ) = @_;
     
+    # for drug match
     if ( $request eq 'drug' ) {
         my %seen;
         foreach my $i ( @{$a} ){
@@ -64,6 +52,8 @@ sub match_builder {
         }
         return(@keeper);
     }
+    
+    # for omim match
     elsif ( $request eq 'omim' ){
         
         my %seen;
@@ -81,6 +71,42 @@ sub match_builder {
         }
         return(@keeper);
     }
+    
+    # for gvf match
+    elsif ( $request eq 'gvf' ){
+        my %seen;
+        foreach my $i ( @{$a} ){
+            $seen{$i} = 1;
+        }
+        my %gene;
+        foreach my $e ( @{$b} ) {
+            if ( $e->{'gene'} ) {
+                $gene{$e->{'gene'}} = $e->{'id'};
+            }
+        }
+        return(%gene);        
+    }
+    
+    # for rsid match
+    elsif ( $request eq 'rsid' ){
+        my %seen;
+        foreach my $i ( @{$a} ){
+            $seen{$i} = 1;
+        }
+        #print Dumper(%s);
+=cut        
+        my %gene;
+        foreach my $e ( @{$b} ) {
+            if ( $e->{'gene'} ) {
+                $gene{$e->{'gene'}} = $e->{'id'};
+            }
+        }
+=cut        
+        #return(%gene);        
+    }
+    
+    
+    # for gene match
     else {
         my %seen;
         foreach my $i ( @{$a} ){
@@ -98,19 +124,85 @@ sub match_builder {
     }
 }
 
+#------------------------------------------------------------------------------
+
+sub _file_splitter {
+
+    my ( $self, $request ) = @_;
+
+    my $obj_fh;
+    open ( $obj_fh, "<", $self->gvf_file ) || die "File" . $self->gvf_file . "can not be opened\n";
+
+    my ( @pragma, @feature_line );
+    foreach my $line ( <$obj_fh> ){
+        chomp $line;
+    
+        $line =~ s/^\s+$//g;
+
+        # captures pragma lines.
+        if ($line =~ /^#{1,}/) {
+            push @pragma, $line;
+        }
+        # or feature_line
+        else { push @feature_line, $line; }
+    }
+    #close->$obj_fh;
+
+    if ( $request eq 'pragma') { return \@pragma }
+    if ( $request eq 'feature') { return \@feature_line }
+}
 
 #------------------------------------------------------------------------------
 
+sub gvf_valadate {
+
+    #my $self = shift;
+    my ( $self, $data ) = @_;
+    
+    # file check
+    if ( ! $data->[0]->{'attribute'}->{'Variant_effect'} ) {
+        die "Your GVF file does not have the required Variant_effect field...\n";
+    }
+    
+    my $dbxh = $self->get_mysql_dbxh;
+
+    # db handle and indexing fasta file.
+    my $db    = Bio::DB::Fasta->new( $self->get_fasta_file, -debug=>1 ) || croak "Fasta file not found $@\n";
+    
+    my ( $correct, $mismatch, $total );
+    foreach my $i ( @{$data} ) {
+    
+        # keep track of the total number of line in file.     
+        $total++;
+        
+        my $chr;
+        if ( $i->{'seqid'} !~ /^chr/ ){
+            $chr = "chr". $i->{'seqid'};
+        }
+        else {
+            $chr = $i->{'seqid'};
+        }
+        
+        my $start   = $i->{'start'};
+        my $end     = $i->{'end'};
+        
+        my $ref_seq = uc($i->{'attribute'}->{'Reference_seq'});
+        if ( $ref_seq eq '-'){ next }
+        
+        # call to Bio::DB. 
+        my $seq = $db->seq("$chr:$start..$end");
+        $seq = uc($seq);
+        
+        if ( $seq eq $ref_seq ) { $correct++; }
+        else { $mismatch++; }
+    }
+    
+    my $value = ($correct/$total) * 100;
+    return ($value);
+}
 
 
-
-
-
-
-
-
-
-
+#------------------------------------------------------------------------------
 
 
 
