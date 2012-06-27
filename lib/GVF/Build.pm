@@ -73,11 +73,11 @@ sub gvf_valadate {
     my ( $correct, $mismatch, $total );
     foreach my $i ( @{$data} ) {
     
-        # keep track of the total number of line in file.     
+        # keep track of the total number of lines in file.     
         $total++;
         
         my $chr;
-        if ( $i->{'seqid'} !~ /^chr/ ){
+        if ( $i->{'seqid'} !~ /^chr/i ){
             $chr = "chr". $i->{'seqid'};
         }
         else {

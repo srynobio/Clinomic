@@ -14,8 +14,6 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 0 },
   "rsid",
   { data_type => "varchar", is_nullable => 0, size => 255 },
-  "common_name",
-  { data_type => "varchar", is_nullable => 1, size => 45 },
   "source",
   { data_type => "varchar", is_nullable => 1, size => 45 },
   "symbol",

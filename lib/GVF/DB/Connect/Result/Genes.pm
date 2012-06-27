@@ -97,4 +97,11 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+__PACKAGE__->has_many(
+  "gwas",
+  "Connect::Result::Gwas",
+  { "foreign.Genes" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 1;

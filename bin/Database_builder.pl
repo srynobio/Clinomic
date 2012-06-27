@@ -7,21 +7,23 @@ use Getopt::Long;
 
 use Data::Dumper;
 
-our ($VERSION) = '0.01';
+our $VERSION  = '0.01';
 
 my $usage = "\n
+Database_builder $VERSION
+
 DESCRIPTION:
 USAGE:
 OPTIONS(required):
 \n";
 
 
-my ( $mysql, $pass, $help, $db_files );
+my ( $user, $pass, $help, $db_lib );
  
 my $result = GetOptions(
-    'mysql_user=s' => \$mysql,
-    'mysql_pass=s' => \$pass,
-    'db_files=s'   => \$db_files,
+    'u=s'     => \$user,
+    'p=s'     => \$pass,
+    #'db_lib=s'   => \$db_lib,
     'help'       => \$help,
 ) || die $usage;
 
@@ -29,21 +31,22 @@ my $result = GetOptions(
 if ( $help ){ die $usage }
 
 # Build the database
-if ( $mysql && $pass && $db_files ) {
+if ( $user && $pass ) {
     
     # db info.
-    my $user = {
-        user   => $mysql,
+    my $person = {
+        user   => $user,
         passwd => $pass,
     };
 
-    # try and add db system call here.
+    # Build database
+    system("mysql -u $user -p $pass< ../data/mysql/GVFClin.sql");
     
     # Building db object.
     my $db = GVF::Clin->new(
-        data_directory => $db_files,
+        #data_directory => $db_lib,
         build_database => 1,
-        mysql_user     => $user,
+        mysql_user     => $person,
     );
 }
 else {

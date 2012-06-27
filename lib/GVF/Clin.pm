@@ -16,16 +16,8 @@ use Data::Dumper;
 has 'data_directory' => (
     is       => 'rw',
     isa      => 'Str',
-    required => 1,
+    default  => '../data/',
     reader   => 'get_directory',
-);
-
-has 'gvf_file' => (
-    is       => 'rw',
-    isa      => 'Str', 
-    reader   => 'gvf_file',
-    writer   => 'set_gvf_file',
-    trigger  => \&_build_feature_lines,
 );
 
 has 'gene_names' => (
@@ -37,25 +29,6 @@ has 'gene_names' => (
         get_gene_names => 'uniq',
     },
 );
-
-has 'fasta_file' => (
-    is     => 'rw',
-    isa    => 'Str',
-    writer => 'set_fasta_file',
-    reader => 'get_fasta_file',
-);
-
-
-
-sub gvf_data {
-    my ( $self, $data, $request ) = @_;
-    
-    if ( ! $data->{'file'} && $data->{'fasta'} ) { die "Please correct file information $@\n"; }
-    if ( -z  $data->{'file'} ) { die "Your file appears to be empty\n"; }
-    
-    $self->set_fasta_file( $data->{'fasta'} );
-    $self->set_gvf_file( $data->{'file'} );
-}
 
 
 1;

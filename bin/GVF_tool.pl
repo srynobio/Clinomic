@@ -2,13 +2,12 @@
 use strict;
 use warnings;
 use lib '/home/srynearson/GVF-Clin/lib';
-use GVF::Clin;
 use GVF::Build;
 use Getopt::Long;
 
 use Data::Dumper;
 
-#our ($VERSION) = '$Revision: 1 $' =~ m{ \$Revision: \s+ (\S+) }x;
+our ($VERSION) = '1';
 
 my $usage = "\n
 DESCRIPTION:
@@ -17,12 +16,9 @@ OPTIONS(required):
 \n";
 
 
-my ( $mysql, $pass, $gvf, $fasta, $help, $db_files, $valadate, $ref );
+my ( $gvf, $fasta, $help, $valadate, $ref );
  
 my $result = GetOptions(
-    'mysql_user=s' => \$mysql,
-    'mysql_pass=s' => \$pass,
-    'db_files=s'   => \$db_files,
     'gvf_file=s'   => \$gvf,
     'fa=s'         => \$fasta,
     'ref_match=s'  => \$ref,
@@ -34,30 +30,6 @@ my $result = GetOptions(
 
 # print message
 if ( $help ){ die $usage }
-
-
-
-if ( $mysql && $pass && $db_files ) {
-    
-    # db info.
-    my $user = {
-        #user   => 'srynearson',
-        #passwd => 'sh@wnPAss',
-        user   => $mysql,
-        passwd => $pass,
-    };
-    
-    # Building db object.
-    my $db = GVF::Clin->new(
-        data_directory => $db_files,
-        #data_directory => '/home/srynearson/GVF-Clin/data',
-        build_database => 1,
-        mysql_user     => $user,
-    );
-}
-
-
-
 
 if ( $gvf && $fasta ) {
 
@@ -72,7 +44,17 @@ if ( $gvf && $fasta ) {
     );
     $file->gvf_valadate;
 }
+else {
+    print "
+        Unable to create or build database,
+        please check files and try again.
+
+        For help use: ./Database_builder.pl --help
+    \n";
+}
 
 
-
+# add later to venn script
+# for R
+#venn.diagram(x=list("PharmGKB"= test1, "SNOMED"= test2), filename="testone", height = 4000, width = 5000, resolution = 800, main="SNOMED vs PharmGKB disease terms", scaled = FALSE)
 
