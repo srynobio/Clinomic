@@ -149,7 +149,33 @@ sub pharmgkb_word_alter {
 
 #------------------------------------------------------------------------------
 
+sub fork_threads{
+    my ( $self, $data )  = @_;
+    my @childs;
+    
+    foreach my $feature ( @{$data} ){
+        next if ! defined $feature;
 
+        my $pid = fork();
+        
+        if ($pid) {
+            # parent
+            push(@childs, $pid);
+        }
+        elsif ($pid == 0) {
+            # child
+            print "building $feature table\n";
+            $self->$feature;
+            exit 0;
+        }
+        else {
+            die "couldnt fork: $!\n";
+        }
+    }
+        return \@childs;
+}
+
+#------------------------------------------------------------------------------
 
 
 

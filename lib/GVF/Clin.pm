@@ -5,8 +5,6 @@ use Carp;
 
 with 'GVF::Roles';
 
-our $version = 'VERSION 0.01';
-
 use Data::Dumper;
 
 #-----------------------------------------------------------------------------
@@ -17,6 +15,7 @@ has 'data_directory' => (
     is       => 'rw',
     isa      => 'Str',
     default  => '../data/',
+    writer   => 'set_directory',
     reader   => 'get_directory',
 );
 
@@ -30,6 +29,11 @@ has 'gene_names' => (
     },
 );
 
+has 'threads' => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => '8',
+);
 
 1;
 

@@ -18,20 +18,39 @@ OPTIONS(required):
 \n";
 
 
-my ( $user, $pass, $help, $db_lib );
+my ( $user, $pass, $help, $threads, $db_lib );
  
 my $result = GetOptions(
-    'u=s'     => \$user,
-    'p=s'     => \$pass,
-    #'db_lib=s'   => \$db_lib,
-    'help'       => \$help,
+    'u=s'      => \$user,
+    'p=s'      => \$pass,
+    't=s'      => \$threads,
+    'db_lib=s' => \$db_lib,
+    'help'     => \$help,
 ) || die $usage;
 
 # print message
 if ( $help ){ die $usage }
 
 # Build the database
-if ( $user && $pass ) {
+if ( $user && $pass && $db_lib ){
+
+    # db info.
+    my $person = {
+        user   => $user,
+        passwd => $pass,
+    };
+
+    # Build database
+    #system("mysql -u $user -p < ../data/mysql/GVFClin.sql");
+    
+    # Building db object.
+    my $db = GVF::Clin->new(
+        data_directory => $db_lib,
+        build_database => 1,
+        mysql_user     => $person,
+    );   
+}
+elsif ( $user && $pass ) {
     
     # db info.
     my $person = {
@@ -40,7 +59,7 @@ if ( $user && $pass ) {
     };
 
     # Build database
-    system("mysql -u $user -p $pass< ../data/mysql/GVFClin.sql");
+    #system("mysql -u $user -p < ../data/mysql/GVFClin.sql");
     
     # Building db object.
     my $db = GVF::Clin->new(

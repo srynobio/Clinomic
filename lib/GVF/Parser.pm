@@ -337,42 +337,6 @@ sub gene2refseq {
 
 #------------------------------------------------------------------------------
 
-# this method will be saved to offer support to users who want to use OMIM data.
-
-sub omim {
-    
-    my $self = shift;
-        
-    # uses the relationship file to collect omim information 
-    my $omim_file = $self->get_directory . "/" . 'OMIM' . "/" . "genemap";
-    my $omim_fh   = IO::File->new($omim_file, 'r') || die "Can not open OMIM/genemap file\n";
-    
-    my @omim_list;
-    foreach my $line ( <$omim_fh> ){
-        chomp $line;
-        
-        my @omim = split /|/, $line;
-        
-        # just want the first symbol it's HGNC.
-        $omim[5] =~ /^(\w+),?(.*)$/;
-        
-        
-        my $omim = {
-            cyto     => $omim[4], 
-            status   => $omim[6], 
-            disease  => $omim[7], 
-            omim_num => $omim[10],
-            symbol   => uc($1),
-        };
-        push @omim_list, $omim;        
-    }
-    $omim_fh->close;
-
-    $self->_populate_omim_info(\@omim_list);
-}
-
-#------------------------------------------------------------------------------
-
 sub gwas {
 
     my $self = shift;
@@ -413,6 +377,42 @@ sub gwas {
     $gwas_fh->close;
        
     $self->_populate_gwas(\@gwas_list);
+}
+
+#------------------------------------------------------------------------------
+
+# this method will be saved to offer support to users who want to use OMIM data.
+
+sub omim {
+    
+    my $self = shift;
+        
+    # uses the relationship file to collect omim information 
+    my $omim_file = $self->get_directory . "/" . 'OMIM' . "/" . "genemap";
+    my $omim_fh   = IO::File->new($omim_file, 'r') || die "Can not open OMIM/genemap file\n";
+    
+    my @omim_list;
+    foreach my $line ( <$omim_fh> ){
+        chomp $line;
+        
+        my @omim = split /|/, $line;
+        
+        # just want the first symbol it's HGNC.
+        $omim[5] =~ /^(\w+),?(.*)$/;
+        
+        
+        my $omim = {
+            cyto     => $omim[4], 
+            status   => $omim[6], 
+            disease  => $omim[7], 
+            omim_num => $omim[10],
+            symbol   => uc($1),
+        };
+        push @omim_list, $omim;        
+    }
+    $omim_fh->close;
+
+    $self->_populate_omim_info(\@omim_list);
 }
 
 #------------------------------------------------------------------------------

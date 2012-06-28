@@ -1,5 +1,6 @@
 package GVF::DB::MySQL;
 use Moose::Role;
+use threads;
 use Carp;
 use GVF::DB::Connect;
 
@@ -48,6 +49,7 @@ sub _mysql_dbx_builder {
 #------------------------------------------------------------------------------
 
 sub _build_database {
+    
     my $self = shift;
 
     my $dbxh = $self->dbxh;
@@ -56,17 +58,29 @@ sub _build_database {
     my $check   = $id->get_column('id');
     my $max_id = $check->max;
     
-    if ( ! $max_id ){
+    my $threads = $self->threads;
+    my @features = qw / clinvar_gene clinvar_hgmd gene_relationship
+                        genetic_association drug_bank rsid gene2refseq gwas /;
+                        
+    if ( ! $max_id ) {
+        
+        # build gene table first
+        print "Building Gene table\n";
         $self->genes;
-        $self->gene_relationship;
-        $self->genetic_association;
-        $self->clinvar_gene;
-        $self->clinvar_hgmd;
-        $self->drug_bank;
-        $self->rsid;
-        $self->gene2refseq;
-        $self->gwas;
+        
+        my @temp_features;    
+        for(my $i = 0; $i <= $threads; $i++){
+            my $feature = shift @features;
+                push @temp_features, $feature;
+        }
+    
+        my $child = $self->fork_threads(\@temp_features);
+    
+        foreach my $c (@{$child}){
+            waitpid($c, 0);
+        }
     }
+    else { print "\nGVFClin database already exists\n"; }
 }
 
 #------------------------------------------------------------------------------
