@@ -32,25 +32,7 @@ my $result = GetOptions(
 if ( $help ){ die $usage }
 
 # Build the database
-if ( $user && $pass && $db_lib ){
-
-    # db info.
-    my $person = {
-        user   => $user,
-        passwd => $pass,
-    };
-
-    # Build database
-    #system("mysql -u $user -p < ../data/mysql/GVFClin.sql");
-    
-    # Building db object.
-    my $db = GVF::Clin->new(
-        data_directory => $db_lib,
-        build_database => 1,
-        mysql_user     => $person,
-    );   
-}
-elsif ( $user && $pass ) {
+if ( $user && $pass ) {
     
     # db info.
     my $person = {
@@ -60,13 +42,23 @@ elsif ( $user && $pass ) {
 
     # Build database
     #system("mysql -u $user -p < ../data/mysql/GVFClin.sql");
-    
+
+        
     # Building db object.
-    my $db = GVF::Clin->new(
-        #data_directory => $db_lib,
-        build_database => 1,
-        mysql_user     => $person,
+    my $db;
+    if ( $db_lib) {
+        $db = GVF::Clin->new(
+            data_directory => $db_lib,
+            build_database => 1,
+            mysql_user     => $person,
     );
+    }
+    else{
+        $db = GVF::Clin->new(
+            build_database => 1,
+            mysql_user     => $person,
+        );        
+    }
 }
 else {
     print "
