@@ -5,8 +5,6 @@ use Carp;
 #use Bio::DB::Fasta;
 use Data::Dumper;
 
-
-
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
@@ -15,14 +13,13 @@ sub match_builder {
 
     my ($self, $a, $b , $request ) = @_;
     
-    # most used section
     if ( $request eq 'simple' ){
         
         my %seen;
         foreach my $i ( @{$b} ){
             $seen{ $i->{'symbol'} } = $i->{'id'};
         }
-
+    
         my @keeper;
         foreach my $e ( @{$a} ) {
             my $looking = $e->{'symbol'};
@@ -33,23 +30,24 @@ sub match_builder {
         return(\@keeper);
     }
 
-    elsif ( $request eq 'relation' ){
+    elsif ( $request eq 'refseq' ){
         
         my %seen;
         foreach my $i ( @{$b} ){
-            $seen{ $i->{'gene_id'} } = $i->{'id'};
+            $seen{$i->{'trans'}} = $i->{'id'};
         }
-
+        
         my @keeper;
         foreach my $e ( @{$a} ) {
-            my $looking = $e->{'gene_id'};
+            if (! $e->{'rna_acc'}) {next}
+            my $looking = $e->{'rna_acc'};
             if ( $seen{$looking} ) {
                 push @keeper, [ $e, $seen{$looking} ];
             }
         }
         return(\@keeper);
     }
-
+    
     # thats what Deaner was talking about.
     elsif ( $request eq 'gene' ){
         
@@ -62,8 +60,9 @@ sub match_builder {
         foreach my $e ( @{$b} ) {
             my $looking = $e->{'symbol'};
             if ( $seen{$looking} ) {
+                
                 push @keeper, [ $e, $seen{$looking}->{'refseq'}, $seen{$looking}->{'name'},
-                               $seen{$looking}->{'hgnc_id'}, $seen{$looking}->{'pubmed_id'}, $seen{$looking}->{'omim'} ];
+                               $seen{$looking}->{'omim_id'}, $seen{$looking}->{'chromo'}];                
             }
         }
         return(\@keeper);
@@ -92,7 +91,7 @@ sub _file_splitter {
         # or feature_line
         else { push @feature_line, $line; }
     }
-    #close->$obj_fh;
+    close->$obj_fh;
 
     if ( $request eq 'pragma') { return \@pragma }
     if ( $request eq 'feature') { return \@feature_line }
@@ -103,13 +102,13 @@ sub _file_splitter {
 sub simple_match {
     my ( $self, $data ) = @_;
     
-        my $dbxh = $self->dbxh;    
+    my $xcl = $self->get_dbixclass;
 
     # capture list of gene_id's
-    my $gene_id = $dbxh->resultset('Genes')->search (
-        undef, { columns => [qw/ id symbol /], }
+    my $gene_id = $xcl->resultset('Hgnc_gene')->search (
+        undef, { columns => [qw/symbol id /] }, 
     );
-    
+
     my @symbols;
     while ( my $result = $gene_id->next ){
         my $list = {
@@ -118,76 +117,13 @@ sub simple_match {
         };
         push @symbols, $list; 
     }    
-
     my $match = $self->match_builder($data, \@symbols, 'simple');
-    
     return $match;
 }
 
-
 #------------------------------------------------------------------------------
 
-sub pharmgkb_word_alter {
-    my ( $self, $word ) = @_;
-    
-    $word =~ s/^(\w+)(,)(\s)(\w+)$/$4 $1/g;
-    $word =~ s/^(\w+)(,)(\s)(\w+)(\s)(\w+)$/$4 $6 $1/g;
-    $word =~ s/^(\w+)(,)(\s)(\w+)(\s)(\w+)(\s)(\w+)$/$4 $6 $8 $1/g;
-    $word =~ s/^(\w+)(,)(\s)(\w+-\w+)$/$4 $1/g;
-    $word =~ s/^(\w+)(,)(\s)(\w+)(,)(\s)(\w+)$/$7 $4 $1/g;
-    $word =~ s/^(\w+)(\s)(\w+)(,)(\s)(\w+)$/$6 $1 $3/g;
-    $word =~ s/^(\w+)(\s)(\w+)(\s)(\w+)(,)(\s)(\w+)$/$8 $1 $3 $5/g;
-    $word =~ s/^(\w+)(\s)(\w+)(,)(\s)(\w+)(\s)(\w+)(\s)(\w+)$/$6 $8 $10 $1 $3/g;
-    $word =~ s/^(\w+)(,)(\s)(\w+)(,)(\s)(\w+)(\s)(\w+)(\s)(\w+)$/$7 $9 $11 $4 $1/g;
-    $word =~ s/^(\w+)(\s)(\w+)(,)(\s)(\w+-\w+)$/$6 $1 $3/g;
-    $word =~ s/^(\w+-\w+)(,)(\s)(\w+)$/$4 $1/g;
-    $word =~ s/^(\w+-\w+)(,)(\s)(\w+-\w+)$/$4 $1/g;
-    $word =~ s/^(\w+)(\s)(\w+)(,)(\s)(\w+)(,)(\s)(\w+)$/$6 $9 $1 $3/g;
-
-    print $word, "\n";
-}
-
-#------------------------------------------------------------------------------
-
-sub fork_threads{
-    my ( $self, $data )  = @_;
-    my @childs;
-    
-    foreach my $feature ( @{$data} ){
-        next if ! defined $feature;
-
-        my $pid = fork();
-        
-        if ($pid) {
-            # parent
-            push(@childs, $pid);
-        }
-        elsif ($pid == 0) {
-            # child
-            print "building $feature table\n";
-            $self->$feature;
-            exit 0;
-        }
-        else {
-            die "couldnt fork: $!\n";
-        }
-    }
-        return \@childs;
-}
-
-#------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-#
+## KEEP ###
 #sub gvf_valadate {
 #
 #    #my $self = shift;
@@ -234,7 +170,6 @@ sub fork_threads{
 #    my $value = ($correct/$total) * 100;
 #    return ($value);
 #}
-
 
 #------------------------------------------------------------------------------
 

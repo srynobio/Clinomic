@@ -19,32 +19,7 @@ has 'data_directory' => (
     reader   => 'get_directory',
 );
 
-has 'gene_names' => (
-    traits  => ['Array'],
-    is      => 'rw',
-    isa     => 'ArrayRef',
-    writer  => 'set_gene_name',
-    handles => {
-        get_gene_names => 'uniq',
-    },
-);
-
-has 'threads' => (
-    is      => 'rw',
-    isa     => 'Int',
-    default => '8',
-);
-
 1;
-
-
-
-
-
-
-
-
-
 
 
 

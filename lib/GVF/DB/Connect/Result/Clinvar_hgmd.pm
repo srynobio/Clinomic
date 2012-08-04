@@ -12,19 +12,15 @@ __PACKAGE__->table("Clinvar_hgmd");
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_nullable => 0 },
-  "symbol",
-  { data_type => "varchar", is_nullable => 0, size => 255 },
-  "chromosome",
-  { data_type => "varchar", is_nullable => 1, size => 45 },
-  "location",
-  { data_type => "varchar", is_nullable => 1, size => 45 },
+  "position",
+  { data_type => "integer", is_nullable => 1 },
   "so_feature",
   { data_type => "varchar", is_nullable => 1, size => 45 },
-  "rs_id",
-  { data_type => "varchar", is_nullable => 1, size => 45 },
-   "Genes_id",
+  "rsid",
+  { data_type => "varchar", is_nullable => 1, size => 30 },
+   "hgnc_gene_id",
   {
-    accessor       => "Gene_id",
+    accessor       => "hgnc_gene_id",
     data_type      => "integer",
     is_foreign_key => 1,
     is_nullable    => 0,
@@ -34,12 +30,10 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
-  "Genes_id",
-  "Connect::Result::Genes",
-  { id => "Genes_id" },
+  "hgnc_gene",
+  "Connect::Result::Hgnc_gene",
+  { id => "hgnc_gene_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
-
 1;
-

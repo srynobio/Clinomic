@@ -14,60 +14,46 @@ OPTIONS(required):
 \n";
 
 
-my ( $gvf, $fasta, $help, $valadate, $per, $user, $pass, $tabix );
+my ( $gvf, $help, $valadate, $per, $tabix, $noVal );
  
 my $result = GetOptions(
-    'u=s'       => \$user,
-    'p=s'       => \$pass,
     'gvf=s'     => \$gvf,
-    'fa=s'      => \$fasta,
     'percent=s' => \$per,
     'tbx=s'     => \$tabix,
+    'noVal'     => \$noVal,
     'help'      => \$help,
-    
 ) || die $usage;
-
 
 # print message
 if ( $help ){ die $usage }
 
-if ( $gvf && $fasta ) {
+if ( $gvf ) {
 
-    # This wil check if required Variant_effect information is added.
-    # and check if references match current build.
-
-    # db info.
-    my $person = {
-        user   => $user,
-        passwd => $pass,
-    };
 
     my $file;
     if ( $per ){
         # Make new object for gvf file.
         $file = GVF::Build->new(
-            fasta_file    => $fasta,
             gvf_file      => $gvf,
-            mysql_user    => $person,
         );
         $file->set_ref_match($per);
     }
     else {
         # Make new object for gvf file.
         $file = GVF::Build->new(
-            fasta_file => $fasta,
             gvf_file   => $gvf,
-            mysql_user => $person,
         );
     }
 
+ if ( ! $noVal )
+ {
     # valadate the file for gene information and reference match
     my ($valid, $hasGene, $match) = $file->gvf_valadate;
 
     # if fasta match is not met, the file will not be added, and the program will die.
     if (  ! $$valid  ) {
         die "\n Your GVF file does not match the reference at ", $file->get_ref_match,
-            "% it will not be added to the database\n\n Match percent ", $$match, "\n\n";
+            "% it will not be added to the database\n\n Match percent: ", int($$match), "%\n\n";
     }
     elsif ( $$valid && $$hasGene ){
         print "
@@ -78,21 +64,25 @@ if ( $gvf && $fasta ) {
         $file->populate_gvf_data;
     }
     else {
-        if ( $tabix ){
-            print "\nLooking for gene matches using NCBI current feature file\nMatch percent ", $$match, "\n\n";
-            $file->tabix_build($tabix);
-        }
-        else {
-            print "File has no gene information via Varient_effect, please include tabix file\n\n$usage";
-        }
+        #if ( $tabix ){
+            print "\nLooking for gene matches using NCBI current feature build file\nMatch percent: ", int($$match), "%\n\n";
+            #$file->tabix_build($tabix);
+            $file->tabix_build;
+        #}
+        #else {
+         #   print "\nFile has no gene information via Varient_effect, please include tabix file\n\n$usage";
+        #}
     }
+ }
+ elsif ( $noVal) {
+    $file->populate_gvf_data;
+ }
 }
 
 else {
     print "
-        Unable to create or build database,
-        please check files and try again.
-        $usage \n";
+        Unable to add GVF file to database, please check files and include all required options.
+        \n$usage\n";
 }
 
 

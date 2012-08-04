@@ -7,7 +7,7 @@ use base qw/DBIx::Class::Core/;
 __PACKAGE__->load_components("InflateColumn::DateTime");
 
 
-__PACKAGE__->table("GVFClin");
+__PACKAGE__->table("GVFclin");
 
 
 __PACKAGE__->add_columns(
@@ -99,9 +99,9 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 45 },
   "clin_drug_eff_interpet",
   { data_type => "varchar", is_nullable => 1, size => 45 },
-  "Ncbi_gene_id",
+  "Genes_id",
   {
-    accessor       => "Ncbi_gene_id",
+    accessor       => "Gene_id",
     data_type      => "integer",
     is_foreign_key => 1,
     is_nullable    => 0,
@@ -111,10 +111,11 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
-  "ncbi_gene",
-  "Connect::Result::Ncbi_gene",
-  { id => "Ncbi_gene_id" },
+  "Genes_id",
+  "Connect::Result::Genes",
+  { id => "Genes_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
+
 
 1;

@@ -5,12 +5,15 @@ use lib '/home/srynearson/GVF-Clin/lib';
 use GVF::Clin;
 use Getopt::Long;
 
-use Data::Dumper;
+our $VERSION  = '0.0.1';
 
-our $VERSION  = '0.01';
+#####  current time 23m13.942s  ######
+#####  latest  time 9m51.305s  ######
+### 9m52.224s
+
 
 my $usage = "\n
-Database_builder $VERSION
+DatabaseBuilder $VERSION
 
 DESCRIPTION:
 USAGE:
@@ -18,57 +21,30 @@ OPTIONS(required):
 \n";
 
 
-my ( $user, $pass, $help, $threads, $db_lib );
+my ( $help, $db_lib );
  
 my $result = GetOptions(
-    'u=s'      => \$user,
-    'p=s'      => \$pass,
-    't=s'      => \$threads,
-    'db_lib=s' => \$db_lib,
-    'help'     => \$help,
+    'db_lib=s'  => \$db_lib,
+    'help'      => \$help,
 ) || die $usage;
 
 # print message
 if ( $help ){ die $usage }
 
-# Build the database
-if ( $user && $pass ) {
-    
-    # db info.
-    my $person = {
-        user   => $user,
-        passwd => $pass,
-    };
+# check that user has sqlite3
+my $sqlite_check = `sqlite3 -version`;
+if ( ! $sqlite_check ) { die "sqlite3 is required\n"; }
 
-    # Build database
-    #system("mysql -u $user -p < ../data/mysql/GVFClin.sql");
-
-        
-    # Building db object.
-    my $db;
-    if ( $db_lib) {
-        $db = GVF::Clin->new(
-            data_directory => $db_lib,
-            build_database => 1,
-            mysql_user     => $person,
+# Building db object.
+my $db;
+if ( $db_lib) {
+    $db = GVF::Clin->new(
+        data_directory => $db_lib,
+        build_database => 1,
     );
-    }
-    else{
-        $db = GVF::Clin->new(
-            build_database => 1,
-            mysql_user     => $person,
-        );        
-    }
 }
-else {
-    print "
-        Unable to create or build database,
-        please check files and try again.
-
-        For help use: ./Database_builder.pl --help
-    \n";
+else{
+    $db = GVF::Clin->new(
+        build_database => 1,
+    );        
 }
-
-
-
-
