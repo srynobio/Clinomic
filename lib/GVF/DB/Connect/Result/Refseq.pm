@@ -1,8 +1,10 @@
 package GVF::DB::Connect::Result::Refseq;
 use strict;
 use warnings;
+use Data::Dumper;
 
 use base qw/DBIx::Class::Core/;
+
 
 __PACKAGE__->load_components("InflateColumn::DateTime");
 

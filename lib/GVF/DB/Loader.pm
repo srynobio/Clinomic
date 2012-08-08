@@ -7,66 +7,34 @@ use GVF::DB::Connect;
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
 
-has 'build_database' => (
-    is         => 'rw',
-    isa        => 'Int',
-    trigger => \&_build_database,
-);
-
-has 'dbh' => (
-    is         => 'rw',
-    isa        => 'Object',
-    writer     => 'set_dbh',
-    reader     => 'dbh',
-    lazy_build => 1,
-);
-
 has 'dbixclass' => (
-    is         => 'rw',
-    isa	       => 'Object',
-    reader     => 'dbixclass',
-    writer     => 'set_dbixclass',
-    reader     => 'get_dbixclass',
-    lazy_build => 1,
+    is      => 'rw',
+    isa	    => 'Object',
+    reader  => 'dbixclass',
+    writer  => 'set_dbixclass',
+    reader  => 'get_dbixclass',
+    default => sub {
+        my $self = shift;
+        my $dbix;
+        
+        if ( -f '../data/GeneDatabase.db' ){
+            die "\nGeneDatabase already exists\n";
+        }
+        else {
+            system("sqlite3 ../data/GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
+            $dbix = GVF::DB::Connect->connect('dbi:SQLite:../data/GeneDatabase.db');
+        }
+        $self->set_dbixclass($dbix);
+    },
 );
 
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
 
-sub _build_dbh {
-
-    my $self = shift;
-    
-    my $dbh;
-
-    if ( -f '../data/GVFClin.db' ){
-        die "GVFClin database already exists\n";
-        $dbh = GVF::DB::Connect->connect('dbi:SQLite:../data/GVFClin.db');
-    }
-    else {
-        system("sqlite3 ../data/GVFClin.db < ../data/mysql/GVFClinLite.sql");
-        $dbh = GVF::DB::Connect->connect('dbi:SQLite:../data/GVFClin.db');
-    }
-    $self->set_dbh($dbh);
-}
-
-#-----------------------------------------------------------------------------
-
-sub _build_dbixclass {
-  
-    my $self = shift;
-    my $dbixclass = GVF::DB::Connect->connect("dbi:SQLite:../data/GVFClin.db");
-
-    $self->set_dbixclass($dbixclass);
-}
-
-#------------------------------------------------------------------------------
-
 sub _build_database {
 
     my $self = shift;
-    my $dbh = $self->dbh;
     
     warn "Building Database\n";
     $self->hgnc;
@@ -212,6 +180,89 @@ sub _populate_drug_info {
     }
 }
 
+#------------------------------------------------------------------------------
+
+## start of the ClinBuilder methods ##
+=cut
+sub populate_gvf_data {
+
+    my $self = shift;
+    
+    #my $dbxh = $self->dbxh;
+    my $data = $self->get_gvf_data;
+
+    my @geneName;
+    foreach my $i ( @{$data} ) {
+    
+        if ( ! $i->{'attribute'}->{'Variant_effect'} ) { next }
+        $i->{'attribute'}->{'Variant_effect'} =~ /\s+gene\s+(\S+),?/;
+
+        my $gene = {
+            symbol => uc($1),
+        };
+        push @geneName, $gene;
+    }
+    
+    #### may delete later
+    if ( ! scalar @geneName >= 1 ) { die "\nCannot locate gene information in Variant_effect attribute of your GVF file\n"; }
+
+    # match to the database of gene names.
+    my $match = $self->simple_match(\@geneName);
+    
+    # a hack to create uniq gene name with db id's.
+    my %g;
+    foreach my $i (@{$match}) {
+        my $gene = uc($i->[0]->{'symbol'});
+        my $id   = $i->[1];
+        
+        $g{$gene} = [] unless exists $g{$gene};
+        push @{$g{$gene}}, [$id];
+    }
+    
+    # build db
+    foreach my $i ( @{$data} ) {
+        chomp $i;
+
+        if ( $i->{'attribute'}->{'Reference_seq'} eq $i->{'attribute'}->{'Variant_seq'} ) {  print Dumper($i); next;}
+        
+        # Get gene from variant_effect
+        $i->{'attribute'}->{'Variant_effect'} =~ /\s+gene\s+(\S+),?/;
+        
+        if ( $g{$1} ) {
+            $dbxh->resultset('GVFclin')->create({
+                seqid             => $i->{'seqid'},
+                source            => $i->{'source'},
+                type              => $i->{'type'},
+                start             => $i->{'start'},
+                end               => $i->{'end'},
+                score             => $i->{'score'},
+                strand            => $i->{'strand'},                
+                attributes_id     => $i->{'attribute'}->{'ID'},
+                alias             => $i->{'attribute'}->{'Alias'},
+                dbxref            => $i->{'attribute'}->{'Dbxref'},
+                variant_seq       => $i->{'attribute'}->{'Variant_seq'},
+                reference_seq     => $i->{'attribute'}->{'Reference_seq'},
+                variant_reads     => $i->{'attribute'}->{'Variant_reads'},
+                total_reads       => $i->{'attribute'}->{'Total_reads'},
+                zygosity          => $i->{'attribute'}->{'Zygosity'},
+                variant_freq      => $i->{'attribute'}->{'Variant_freq'},
+                variant_effect    => $i->{'attribute'}->{'Variant_effect'},
+                start_range       => $i->{'attribute'}->{'Start_range'},
+                end_range         => $i->{'attribute'}->{'End_range'},
+                phased            => $i->{'attribute'}->{'Phased'},
+                genotype          => $i->{'attribute'}->{'Genotype'},
+                individual        => $i->{'attribute'}->{'Individual'},
+                variant_codon     => $i->{'attribute'}->{'Variant_codon'},
+                reference_codon   => $i->{'attribute'}->{'Reference_codon'},
+                variant_aa        => $i->{'attribute'}->{'Variant_aa'},
+                breakpoint_detail => $i->{'attribute'}->{'Breakpoint_detail'},
+                sequence_context  => $i->{'attribute'}->{'Sequence_context'},
+                Genes_id          => $g{$1}->[0]->[0],
+            });
+        }
+    }
+}
+=cut
 #------------------------------------------------------------------------------
 
 

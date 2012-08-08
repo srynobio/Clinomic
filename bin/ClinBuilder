@@ -2,8 +2,9 @@
 use strict;
 use warnings;
 use lib '/home/srynearson/GVF-Clin/lib';
-use GVF::Build;
-use Getopt::Long;
+use GVF::Builder;
+
+use Data::Dumper;
 
 our ($VERSION) = '1';
 
@@ -14,6 +15,41 @@ OPTIONS(required):
 \n";
 
 
+# obj building.
+my $builder = GVF::Builder->new_with_options();
+
+# valadate file entered, required.
+my $value = $builder->gvfValadate;
+if ( $$value <= $builder->get_percent) {
+    die "Reference sequence does not valadate at " . $builder->get_percent . "%, " .
+        "Check file or enter new percent_valadate value.\n" .
+        "RESULTS: " . $builder->get_file . " = " . $$value . "%\n";
+}
+
+## KEEP WORKING ON !!!!!
+#my $geneTest = $builder->geneCheck;
+
+
+my $geneFind = $builder->geneFinder;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+__END__
 my ( $gvf, $help, $valadate, $per, $tabix, $noVal );
  
 my $result = GetOptions(
@@ -24,7 +60,9 @@ my $result = GetOptions(
     'help'      => \$help,
 ) || die $usage;
 
-# print message
+
+my $app = GVF::Build->new_with_options();
+
 if ( $help ){ die $usage }
 
 if ( $gvf ) {

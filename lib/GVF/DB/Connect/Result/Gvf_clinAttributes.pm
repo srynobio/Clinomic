@@ -1,4 +1,4 @@
-package GVF::DB::Connect::Result::GVFclin;
+package GVF::DB::Connect::Result::Gvf_clinAttributes;
 use strict;
 use warnings;
 
@@ -7,28 +7,13 @@ use base qw/DBIx::Class::Core/;
 __PACKAGE__->load_components("InflateColumn::DateTime");
 
 
-__PACKAGE__->table("GVFclin");
+__PACKAGE__->table("tmp.db.Gvf_clinAttributes");
 
 
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_nullable => 0 },
-  "seqid",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
-  "source",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
-  "type",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
-  "start",
-  { data_type => "integer", is_nullable => 0 },
-  "end",
-  { data_type => "integer", is_nullable => 0 },
-  "score",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
-  "strand",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
-  "phase",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
+ 
   "attributes_id",
   { data_type => "varchar", is_nullable => 0, size => 45 },
   "alias",
@@ -47,8 +32,6 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 45 },
   "variant_freq",
   { data_type => "varchar", is_nullable => 1, size => 45 },
-  "variant_effect",
-  { data_type => "varchar", is_nullable => 0, size => 45 },
   "start_range",
   { data_type => "varchar", is_nullable => 1, size => 45 },
   "end_range",
@@ -99,9 +82,9 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 45 },
   "clin_drug_eff_interpet",
   { data_type => "varchar", is_nullable => 1, size => 45 },
-  "Genes_id",
+  "gvf_clinFeatures_id",
   {
-    accessor       => "Gene_id",
+    accessor       => "gvf_clinFeatures_id",
     data_type      => "integer",
     is_foreign_key => 1,
     is_nullable    => 0,
@@ -111,10 +94,17 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
-  "Genes_id",
-  "Connect::Result::Genes",
-  { id => "Genes_id" },
+  "gvf_clinFeatures_id",
+  "Connect::Result::Gvf_clinFeatures",
+  { id => "gvf_clinFeature_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
+);
+
+__PACKAGE__->has_many(
+  "variant_effect",
+  "Connect::Result::Variant_effect",
+  { "foreign.gvf_clinAttributes_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 

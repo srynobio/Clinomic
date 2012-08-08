@@ -7,11 +7,6 @@ use Getopt::Long;
 
 our $VERSION  = '0.0.1';
 
-#####  current time 23m13.942s  ######
-#####  latest  time 9m51.305s  ######
-### 9m52.224s
-
-
 my $usage = "\n
 DatabaseBuilder $VERSION
 

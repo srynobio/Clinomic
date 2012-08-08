@@ -5,6 +5,7 @@ use Carp;
 
 with 'GVF::Roles';
 
+
 use Data::Dumper;
 
 #-----------------------------------------------------------------------------
@@ -18,6 +19,13 @@ has 'data_directory' => (
     writer   => 'set_directory',
     reader   => 'get_directory',
 );
+
+has 'build_database' => (
+    is         => 'rw',
+    isa        => 'Int',
+    trigger => \&_build_database,
+);
+
 
 1;
 
