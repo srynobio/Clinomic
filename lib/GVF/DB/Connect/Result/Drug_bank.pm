@@ -27,7 +27,7 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
   "hgnc_gene_id",
-  "Connect::Result::Hgnc_gene",
+  "GVF::DB::Connect::Result::Hgnc_gene",
   { id => "hgnc_gene_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );

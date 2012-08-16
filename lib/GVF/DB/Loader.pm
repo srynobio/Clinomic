@@ -33,13 +33,11 @@ has 'dbixclass' => (
 #------------------------------------------------------------------------------
 
 sub _build_database {
-
     my $self = shift;
     
     warn "Building Database\n";
     $self->hgnc;
     $self->refseq;
-    $self->clinvar_hgmd;
     $self->genetic_association;
     $self->clinvar;
     $self->drug_bank;
@@ -55,7 +53,6 @@ sub _populate_genes {
     foreach my $i ( @{$genes} ){
          $xcl->resultset('Hgnc_gene')->create({
              symbol            => $i->{'symbol'},
-             name              => $i->{'name'},
              chromosome        => $i->{'chromo'},
              omim_id           => $i->{'omim_id'},
              transcript_refseq => $i->{'refseq'},
@@ -66,16 +63,12 @@ sub _populate_genes {
 #------------------------------------------------------------------------------
 
 sub _populate_refseq {
-
     my ($self, $ref) = @_;
-
     my $xcl = $self->get_dbixclass;
 
-    # capture list of gene_id's
-    my $trans_id = $xcl->resultset('Hgnc_gene')->search (
-        undef, { columns => [qw/ transcript_refseq id /] }, 
-    );
-
+    my @hColumns = qw/ transcript_refseq id  /;
+    my $trans_id = $self->xclassGrab('Hgnc_gene', \@hColumns);
+    
     my @transcript;
     while ( my $result = $trans_id->next ){
         my $list = {
@@ -119,16 +112,13 @@ sub _populate_genetic_assoc {
 
 sub _populate_clinvar {
     my ($self, $clin) = @_;
-    
     my $xcl = $self->get_dbixclass;
     
-    # capture list of gene_id's
-    my $gene_id = $xcl->resultset('Genetic_association')->search (
-        undef, { columns => [qw/ symbol id /] }, 
-    );
+    my @gColumns = qw/ symbol id  /;
+    my $genetic = $self->xclassGrab('Hgnc_gene', \@gColumns);
 
     my @symbols;
-    while ( my $result = $gene_id->next ){
+    while ( my $result = $genetic->next ){
         my $list = {
             symbol => $result->symbol,
             id     => $result->id,
@@ -139,27 +129,9 @@ sub _populate_clinvar {
 
     foreach my $i (@{$match}) {
         $xcl->resultset('Clinvar')->create({
-            umls_concept_id        => $i->[0]->{'umls'},
-            snomed_id              => $i->[0]->{'source_id'},
-            genetic_association_id => $i->[1],
-        });
-    }
-}
-
-#------------------------------------------------------------------------------
-
-sub _populate_clinvar_hgmd {
-    my ($self, $hgmd) = @_;
-    
-    my $xcl = $self->get_dbixclass;
-    my $match = $self->simple_match($hgmd);
-
-    foreach my $i ( @{$match} ) {
-        $xcl->resultset('Clinvar_hgmd')->create({
-            position     => $i->[0]->{'position'},
-            so_feature   => $i->[0]->{'so_feature'},
-            rsid         => $i->[0]->{'rsid'},
-            hgnc_gene_id => $i->[1], 
+            umls_concept_id => $i->[0]->{'umls'},
+            snomed_id       => $i->[0]->{'source_id'},
+            hgnc_gene_id    => $i->[1],
         });
     }
 }
@@ -183,87 +155,60 @@ sub _populate_drug_info {
 #------------------------------------------------------------------------------
 
 ## start of the ClinBuilder methods ##
-=cut
-sub populate_gvf_data {
 
-    my $self = shift;
-    
-    #my $dbxh = $self->dbxh;
-    my $data = $self->get_gvf_data;
+use Data::Dumper;
 
-    my @geneName;
-    foreach my $i ( @{$data} ) {
-    
-        if ( ! $i->{'attribute'}->{'Variant_effect'} ) { next }
-        $i->{'attribute'}->{'Variant_effect'} =~ /\s+gene\s+(\S+),?/;
+sub _populate_gvf_data {
+    my $self = shift;   
 
-        my $gene = {
-            symbol => uc($1),
-        };
-        push @geneName, $gene;
+    my $gvf = $self->get_gvf_data;
+    print Dumper($gvf);
+
+
+
+=cut    
+    # build feature db.
+    foreach my $i ( @{$match} ) {
+        $xcl->resultset('GVFClin')->create({
+            seqid  => $i->[0]->{'seqid'},
+            source => $i->[0]->{'source'},
+            type   => $i->[0]->{'type'},
+            start  => $i->[0]->{'start'},
+            end    => $i->[0]->{'end'},
+            score  => $i->[0]->{'score'},
+            strand => $i->[0]->{'strand'},
+            phase  => $i->[0]->{'phase'},
+            attributes_id     => $i->[0]->{'attribute'}->{'ID'},
+            alias             => $i->[0]->{'attribute'}->{'Alias'},
+            dbxref            => $i->[0]->{'attribute'}->{'Dbxref'},
+            variant_seq       => $i->[0]->{'attribute'}->{'Variant_seq'},
+            reference_seq     => $i->[0]->{'attribute'}->{'Reference_seq'},
+            variant_reads     => $i->[0]->{'attribute'}->{'Variant_reads'},
+            total_reads       => $i->[0]->{'attribute'}->{'Total_reads'},
+            zygosity          => $i->[0]->{'attribute'}->{'Zygosity'},
+            variant_freq      => $i->[0]->{'attribute'}->{'Variant_freq'},
+            start_range       => $i->[0]->{'attribute'}->{'Start_range'},
+            end_range         => $i->[0]->{'attribute'}->{'End_range'},
+            phased            => $i->[0]->{'attribute'}->{'Phased'},
+            genotype          => $i->[0]->{'attribute'}->{'Genotype'},
+            individual        => $i->[0]->{'attribute'}->{'Individual'},
+            variant_codon     => $i->[0]->{'attribute'}->{'Variant_codon'},
+            reference_codon   => $i->[0]->{'attribute'}->{'Reference_codon'},
+            variant_aa        => $i->[0]->{'attribute'}->{'Variant_aa'},
+            breakpoint_detail => $i->[0]->{'attribute'}->{'Breakpoint_detail'},
+            sequence_context  => $i->[0]->{'attribute'}->{'Sequence_context'},
+        });
     }
+=cut    
     
-    #### may delete later
-    if ( ! scalar @geneName >= 1 ) { die "\nCannot locate gene information in Variant_effect attribute of your GVF file\n"; }
-
-    # match to the database of gene names.
-    my $match = $self->simple_match(\@geneName);
     
-    # a hack to create uniq gene name with db id's.
-    my %g;
-    foreach my $i (@{$match}) {
-        my $gene = uc($i->[0]->{'symbol'});
-        my $id   = $i->[1];
-        
-        $g{$gene} = [] unless exists $g{$gene};
-        push @{$g{$gene}}, [$id];
-    }
     
-    # build db
-    foreach my $i ( @{$data} ) {
-        chomp $i;
-
-        if ( $i->{'attribute'}->{'Reference_seq'} eq $i->{'attribute'}->{'Variant_seq'} ) {  print Dumper($i); next;}
-        
-        # Get gene from variant_effect
-        $i->{'attribute'}->{'Variant_effect'} =~ /\s+gene\s+(\S+),?/;
-        
-        if ( $g{$1} ) {
-            $dbxh->resultset('GVFclin')->create({
-                seqid             => $i->{'seqid'},
-                source            => $i->{'source'},
-                type              => $i->{'type'},
-                start             => $i->{'start'},
-                end               => $i->{'end'},
-                score             => $i->{'score'},
-                strand            => $i->{'strand'},                
-                attributes_id     => $i->{'attribute'}->{'ID'},
-                alias             => $i->{'attribute'}->{'Alias'},
-                dbxref            => $i->{'attribute'}->{'Dbxref'},
-                variant_seq       => $i->{'attribute'}->{'Variant_seq'},
-                reference_seq     => $i->{'attribute'}->{'Reference_seq'},
-                variant_reads     => $i->{'attribute'}->{'Variant_reads'},
-                total_reads       => $i->{'attribute'}->{'Total_reads'},
-                zygosity          => $i->{'attribute'}->{'Zygosity'},
-                variant_freq      => $i->{'attribute'}->{'Variant_freq'},
-                variant_effect    => $i->{'attribute'}->{'Variant_effect'},
-                start_range       => $i->{'attribute'}->{'Start_range'},
-                end_range         => $i->{'attribute'}->{'End_range'},
-                phased            => $i->{'attribute'}->{'Phased'},
-                genotype          => $i->{'attribute'}->{'Genotype'},
-                individual        => $i->{'attribute'}->{'Individual'},
-                variant_codon     => $i->{'attribute'}->{'Variant_codon'},
-                reference_codon   => $i->{'attribute'}->{'Reference_codon'},
-                variant_aa        => $i->{'attribute'}->{'Variant_aa'},
-                breakpoint_detail => $i->{'attribute'}->{'Breakpoint_detail'},
-                sequence_context  => $i->{'attribute'}->{'Sequence_context'},
-                Genes_id          => $g{$1}->[0]->[0],
-            });
-        }
-    }
+    
+    
 }
-=cut
+
 #------------------------------------------------------------------------------
+
 
 
 1;

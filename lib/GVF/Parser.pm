@@ -27,7 +27,6 @@ sub hgnc {
         
         my $hgnc = {
             symbol  => $symbol,
-            name    => $name,
             chromo  => $chromo,
             omim_id => $omim,
             refseq  => $refseqid, 
@@ -108,47 +107,6 @@ sub clinvar {
 
 #------------------------------------------------------------------------------
 
-sub clinvar_hgmd {
-    my $self = shift;
-        
-    # uses the file to collect clinvar information 
-    my $clinvar_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_hgmd.txt";
-    my $clinvar_fh   = IO::File->new($clinvar_file, 'r') || die "Can not open ClinVar/clinvar_hgmd.txt file\n";
-    
-    my @hgmd_list;
-    foreach my $line ( <$clinvar_fh> ){
-        chomp $line;
-    
-        next if $line =~ /^#/;
-
-        my ( $hgmd_id, $symbol, $chr, $location, $type, undef, $rs ) = split /\t/, $line;
-        next if ! ( $symbol && $rs);    
-
-        # change types to SO terms.
-        if ( $type ){
-            $type =~ s/D/deleation/;
-            $type =~ s/I/insertion/;
-            $type =~ s/M/complex_substitution/;
-            $type =~ s/R/regulatory_region/;
-            $type =~ s/S/substitution/;
-            $type =~ s/X/indel/;
-        }
-
-        my $hgmd_file = {
-            symbol     => $symbol,
-            position   => $location,
-            so_feature => $type,
-            rsid       => $rs,
-        };
-        push @hgmd_list, $hgmd_file;
-    }
-    $clinvar_fh->close;
-    
-    $self->_populate_clinvar_hgmd(\@hgmd_list);
-}
-
-#------------------------------------------------------------------------------
-
 sub drug_bank {
     my $self = shift;
         
@@ -209,7 +167,8 @@ sub refseq {
         my @refs = split /\t/, $line;
         
         unless ( $refs[0] =~ /^9606/ ) { next }
-        unless ( $refs[7] =~ /^NC_(.*)$/ || $refs[7] =~ /^AC_(.*)$/) { next }
+        #unless ( $refs[7] =~ /^NC_(.*)$/ || $refs[7] =~ /^AC_(.*)$/) { next }
+        unless ( $refs[7] =~ /^NC_(.*)$/ ) { next }
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/) { next }
         
         # remove any digits after "."

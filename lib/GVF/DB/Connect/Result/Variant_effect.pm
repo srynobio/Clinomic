@@ -7,7 +7,7 @@ use base qw/DBIx::Class::Core/;
 __PACKAGE__->load_components("InflateColumn::DateTime");
 
 
-__PACKAGE__->table("tmp.db.Variant_effect");
+__PACKAGE__->table("Variant_effect");
 
 
 __PACKAGE__->add_columns(
@@ -23,9 +23,9 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 0, size => 45 },
   "hgnc_gene_id",
   { data_type => "integer", is_nullable => 0 },
-  "gvf_clinAttributes_id",
+  "GVFClin_id",
   {
-    accessor       => "gvf_clinAttributes_id",
+    accessor       => "GVFClin_id",
     data_type      => "integer",
     is_foreign_key => 1,
     is_nullable    => 0,
@@ -35,9 +35,9 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
-  "gvf_clinAttributes_id",
-  "Connect::Result::Gvf_clinAttributes",
-  { id => "gvf_clinAttributes_id" },
+  "GVFClin_id",
+  "GVF::DB::Connect::Result::GVFClin",
+  { id => "GVFClin_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 

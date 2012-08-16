@@ -33,16 +33,9 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
   "hgnc_gene",
-  "Connect::Result::Hgnc_gene",
+  "GVF::DB::Connect::Result::Hgnc_gene",
   { id => "hgnc_gene_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
-);
-
-__PACKAGE__->has_many(
-  "clinvar",
-  "Connect::Result::Clinvar",
-  { "foreign.genetic_association_id" => "self.id" },
-  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 1;

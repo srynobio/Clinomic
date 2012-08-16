@@ -2,36 +2,43 @@
 use strict;
 use warnings;
 use lib '/home/srynearson/GVF-Clin/lib';
-use GVF::Builder;
+use GVF::ClinBuilder;
 
 use Data::Dumper;
 
-our ($VERSION) = '1';
-
-my $usage = "\n
-DESCRIPTION:
-USAGE:
-OPTIONS(required):
-\n";
+our ($VERSION) = '0.0.1';
 
 
 # obj building.
-my $builder = GVF::Builder->new_with_options();
+my $builder = GVF::ClinBuilder->new_with_options();
+
+# capture gvf data
+my $feature = $builder->build_gvf;
 
 # valadate file entered, required.
-my $value = $builder->gvfValadate;
+my $value = $builder->gvfValadate($feature);
 if ( $$value <= $builder->get_percent) {
     die "Reference sequence does not valadate at " . $builder->get_percent . "%, " .
         "Check file or enter new percent_valadate value.\n" .
         "RESULTS: " . $builder->get_file . " = " . $$value . "%\n";
 }
 
-## KEEP WORKING ON !!!!!
-#my $geneTest = $builder->geneCheck;
+# check if features have gene annotations and return
+# updated version
+my $geneGVF = $builder->geneFind($feature);
+
+# build relationship to data in GeneDatabase.db
+my $test = $builder->gvfRelationBuild($geneGVF);
 
 
-my $geneFind = $builder->geneFinder;
 
+
+
+foreach my $i (@{$test}){
+    foreach (@{$i->{'attribute'}->{'clin'}}){
+        print Dumper($_);
+    }
+}
 
 
 

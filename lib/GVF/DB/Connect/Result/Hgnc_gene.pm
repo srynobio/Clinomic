@@ -13,8 +13,6 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 0 },
   "symbol",
   { data_type => "varchar", is_nullable => 0, size => 25 },
-  "name",
-  { data_type => "varchar", is_nullable => 1, size => 30 },
   "chromosome",
   { data_type => "varchar", is_nullable => 1, size => 25 },
   "omim_id",
@@ -27,38 +25,31 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->has_many(
   "drug_bank",
-  "Connect::Result::Drug_bank",
+  "GVF::DB::Connect::Result::Drug_bank",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
-  "clinvar_hgmd",
-  "Connect::Result::Clinvar_hgmd",
+  "clinvar",
+  "GVF::DB::Connect::Result::Clinvar",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
   "genetic_association",
-  "Connect::Result::Genetic_association",
+  "GVF::DB::Connect::Result::Genetic_association",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
   "refseq",
-  "Connect::Result::Refseq",
+  "GVF::DB::Connect::Result::Refseq",
   { "foreign.hgnc_gene_id" => "self.id" },
-  { cascade_copy => 0, cascade_delete => 0 },
+  { cascade_copy => 0, cascade_delete => 0, },
 );
-
-
-
-
-
-
-
 
 
 1;
