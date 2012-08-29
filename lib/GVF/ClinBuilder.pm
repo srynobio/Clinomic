@@ -19,6 +19,7 @@ has 'file' => (
     isa      => 'Str', 
     reader   => 'get_file',
     writer   => 'set_file',
+    required => 1,
 );
 
 has 'fasta_file' => (
@@ -35,19 +36,38 @@ has 'per_validate' => (
     default => '80',
 );
 
-has 'tabix_file' => (
-    is     => 'rw',
-    isa    => 'Str',
-    reader => 'get_tabix',
+has 'tabix_gene' => (
+    is      => 'rw',
+    isa     => 'Str',
+    reader  => 'get_gene_tabix',
     default => '../data/genomes/GRCh37.p5_top_level.gff3.bgz',
 );
 
-has 'gvf_data' => (
-    traits => ['NoGetopt'],
-    is => 'rw',
-    isa => 'ArrayRef',
-    writer => 'set_gvf_data',
-    reader => 'get_gvf_data',
+has 'tabix_dbsnp' => (
+    is      => 'rw',
+    isa     => 'Str',
+    reader  => 'get_db_tabix',
+    default => '../data/dbSNP/dbsnp.bgz',
+);
+
+has 'pragma' => ( 
+    traits    =>['NoGetopt'],
+    is        => 'rw',
+    isa       => 'HashRef',
+    writer    => 'set_pragmas',
+    reader    => 'get_pragmas',
+    predicate => 'has_pragmas',
+);
+
+has 'term_switch' => (
+    traits    => ['Hash'],
+    is        => 'rw',
+    isa       => 'HashRef',
+    predicate => 'need_switch',
+    handles => {
+        termExist => 'exists',
+        access    => 'accessor',
+    },
 );
 
 has 'export' => (
@@ -88,10 +108,12 @@ has '+dbixclass' => (
 #-----------------------------------------------------------------------------
 
 sub build_gvf {
-    
     my ( $self, $data ) = @_;
 
     my $feature_line = $self->_file_splitter('feature');
+    
+    # extract out pragmas and store them in object;
+    $self->pragmas;
     
     my ( @return_list );
     foreach my $lines( @{$feature_line} ) {
@@ -117,15 +139,35 @@ sub build_gvf {
             end    => $end,
             score  => $score,
             strand => $strand,
-            phase  => $phase,
             attribute => {
-                clin => [],
                 %{$value}
             },
         };
         push @return_list, $feature;
     }
     return \@return_list;
+}
+
+#-----------------------------------------------------------------------------
+
+sub pragmas {
+    my $self = shift;
+    
+    # grab only pragma lines
+    my $pragma_line = $self->_file_splitter('pragma');
+    warn "File contains no pragmas\n" if ! $pragma_line;
+        
+    my %p;
+    foreach my $i( @{$pragma_line} ) {
+        chomp $i;
+        
+        my ($tag, $value) = $i =~ /##(\S+)\s?(.*)$/g;
+        $tag =~ s/\-/\_/g;
+        
+        $p{$tag} = [] unless exists $p{$tag};
+        push @{$p{$tag}}, $value;
+    }
+    $self->set_pragmas(\%p);
 }
 
 #-----------------------------------------------------------------------------
@@ -167,7 +209,7 @@ sub gvfValadate {
     }
 
     # check if passes default/given value.
-    if ( $mismatch == $total ) { warn "No matches were found, possible no Reference_seq in file\n";}
+    if ( $mismatch == $total ) { die "No matches were found, possible no Reference_seq in file\n";}
     my $value = ($correct/($total-$noRef)) * 100;
     
     return \$value;
@@ -205,7 +247,7 @@ sub geneFind {
     }
 
     # create tabix object
-    my $tab = Tabix->new(-data => $self->get_tabix) || die "Please input Tabix file\n";
+    my $tab = Tabix->new(-data => $self->get_gene_tabix) || die "Please input gene Tabix file\n";
 
     # search the golden set file for a match
     my @updateGVF;
@@ -260,7 +302,9 @@ sub geneFind {
             push @{$i->{'attribute'}->{'Variant_effect'}}, $atts{'GeneID'} if $atts{'GeneID'};
             push @updateGVF, $i;
         }
+        else {
             push @updateGVF, $i;
+        }
     }
     
     # Little reference witchcraft to try to keep speed and grep only Variant_effect with values.
@@ -292,35 +336,85 @@ sub gvfRelationBuild {
     while (my $i = $hgnc->next){
         
         $genedata{$i->symbol} = [{
-            clin_transcript  => $i->transcript_refseq,
-            omim_id          => $i->omim_id,
+            transcript  => $i->transcript_refseq, 
+            omim        => $i->omim_id,
         }] unless exists $genedata{$i->symbol};
         
         my $ref = $i->refseq;
         while (my $r = $ref->next){
             push @{$genedata{$i->symbol}}, {
-                clin_genomic_reference => $r->genomic_refseq,
-                clin_HGVS_protein      => $r->protein_refseq,
+                genomic_ref  => $r->genomic_refseq,
+                HGVS_protein => $r->protein_refseq,
             };
         }
     }
+    # Call to add rsid from dbSNP file if found.
+    my $clinGVF = $self->snpMatch($gvf);
     
-    foreach my $t (@{$gvf}) {
-    
-        # could add call to dbMatch
-    
+    # add db clin informaton to gvf file.
+    foreach my $t (@{$clinGVF}) {
         
+        # Collect gene name from gvf file
         my $gene;
         foreach ( @{$t->{'attribute'}->{'Variant_effect'}} ) {
             if( $_->{'feature_type'} eq 'gene') {
                 $gene = $_->{'feature_id1'};
+                last;
             }
             else { next }
         }
-        #if (! $gene){ next }
-
+        
+        # search the db for matching gene names, and add all clin data
+        # to working gvf file
         if ( $genedata{$gene} ){
-            push @{$t->{'attribute'}->{'clin'}}, @{$genedata{$gene}};
+            my $ref = $genedata{$gene};
+            
+            my $clin = {
+                clin_gene              => $gene,
+                omim_id                => $ref->[0]->{'omim'},
+                clin_transcript        => $ref->[0]->{'transcript'},
+                clin_genomic_reference => $ref->[1]->{'genomic_ref'},
+                clin_HGVS_protein      => $ref->[1]->{'HGVS_protein'},
+            };
+            $t->{'attribute'}->{'clin'} = $clin;
+        }
+    }
+    return $clinGVF;
+}
+
+#------------------------------------------------------------------------------
+
+sub snpMatch {
+    my ($self, $gvf) = @_;
+    
+    # create tabix object
+    my $tab = Tabix->new(-data => $self->get_db_tabix) || die "Please input dbSNP Tabix file\n";
+    
+    foreach my $i (@{$gvf}){
+    
+        my $chr;
+        if ( $i->{'seqid'} !~ /^chr/i ){ $chr = "chr". $i->{'seqid'}; }
+        else { $chr = $i->{'seqid'}; }
+        
+        my $start = $i->{'start'};
+        my $end   = $i->{'end'};
+
+        # check the tabix file for matching regions
+        my $iter = $tab->query($chr, $start - 1, $end + 1);
+        
+        while (my $read = $tab->read($iter)) {
+            
+            my @rsMatch = split /\t/, $read;
+            my $chr2   = $rsMatch[0];
+            my $start2 = $rsMatch[1];
+            my $rsid   = $rsMatch[2];
+            my $ref    = $rsMatch[3];
+            my $var    = $rsMatch[4];
+            
+            # add rsid file to gvf if found
+            if ($i->{'start'} eq $start2){
+                $i->{'attribute'}->{'clin_variant_id'} = $rsid;
+            }
         }
     }
     return $gvf;
@@ -328,4 +422,27 @@ sub gvfRelationBuild {
 
 #------------------------------------------------------------------------------
 
+sub termUpdate {
+    my ($self, $gvf) = @_;
+
+    # takes the list of values from term_switch and looks in $gvf hash
+    # for the value, then replaces with new key and deletes the old one.
+    my @returnList;
+    foreach my $i ( @{$gvf} ){
+        my $atts = $i->{'attribute'};        
+    
+        while ( my($k, $v) = each %{$i->{'attribute'}} ){
+            if ( $self->termExist($k) ){
+                $i->{'attribute'}->{$self->access($k)} = $v;
+                delete $i->{'attribute'}->{$k};
+            }
+        }
+        push @returnList, $i; 
+    }
+    return \@returnList;
+}
+
+#------------------------------------------------------------------------------
+
 1;
+

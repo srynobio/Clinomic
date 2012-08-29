@@ -66,13 +66,14 @@ sub _populate_refseq {
     my ($self, $ref) = @_;
     my $xcl = $self->get_dbixclass;
 
-    my @hColumns = qw/ transcript_refseq id  /;
+    #my @hColumns = qw/ transcript_refseq id  /;
+    my @hColumns = qw/ symbol id  /;
     my $trans_id = $self->xclassGrab('Hgnc_gene', \@hColumns);
     
     my @transcript;
     while ( my $result = $trans_id->next ){
         my $list = {
-            trans => $result->transcript_refseq,
+            symbol => $result->symbol,
             id    => $result->id,
         };
         push @transcript, $list; 
@@ -81,7 +82,6 @@ sub _populate_refseq {
 
     foreach my $i ( @{$match} ) {
         $xcl->resultset('Refseq')->create({
-            position       => $i->[0]->{'position'},
             genomic_refseq => $i->[0]->{'genomic_acc'},
             protein_refseq => $i->[0]->{'prot_acc'},
             hgnc_gene_id   => $i->[1],

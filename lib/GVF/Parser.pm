@@ -3,7 +3,6 @@ use Moose::Role;
 use Carp;
 use IO::File;
 
-
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
@@ -149,14 +148,13 @@ sub drug_bank {
 #------------------------------------------------------------------------------
 
 sub refseq {
-
     my $self = shift;
     
     my $xcl = $self->get_dbixclass;
     
     # uses the relationship file to collect refseq information 
-    my $ref_file = $self->get_directory . "/" . 'NCBI_Gene' . "/" . "gene2refseq";
-    my $ref_fh   = IO::File->new($ref_file, 'r') || die "Can not open NCBI_Gene/gene2refseq file\n";
+    my $ref_file = $self->get_directory . "/" . 'NCBI_Gene' . "/" . "UpdatedRefSeq.txt";
+    my $ref_fh   = IO::File->new($ref_file, 'r') || die "Can not open NCBI_Gene/UpdatedRefSeq.txt file\n";
     
     my @refseq;
     foreach my $line ( <$ref_fh> ){
@@ -166,18 +164,13 @@ sub refseq {
         
         my @refs = split /\t/, $line;
         
-        unless ( $refs[0] =~ /^9606/ ) { next }
         #unless ( $refs[7] =~ /^NC_(.*)$/ || $refs[7] =~ /^AC_(.*)$/) { next }
         unless ( $refs[7] =~ /^NC_(.*)$/ ) { next }
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/) { next }
         
-        # remove any digits after "."
-        $refs[3] =~ /((\S+)_(\d+))\.(\d+)?/ if $refs[3];
-        my $trans = $1;
-        
         my $refhash = {
-            rna_acc     => $trans,
-            position    => $refs[6],
+            symbol => $refs[1],
+            rna_acc     => $refs[3],
             prot_acc    => $refs[5],
             genomic_acc => $refs[7],
         };

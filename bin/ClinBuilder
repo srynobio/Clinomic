@@ -15,31 +15,28 @@ my $builder = GVF::ClinBuilder->new_with_options();
 # capture gvf data
 my $feature = $builder->build_gvf;
 
+if ($builder->need_switch){
+    $feature = $builder->termUpdate($feature);    
+}
+
 # valadate file entered, required.
 my $value = $builder->gvfValadate($feature);
 if ( $$value <= $builder->get_percent) {
     die "Reference sequence does not valadate at " . $builder->get_percent . "%, " .
-        "Check file or enter new percent_valadate value.\n" .
+        "Check file or enter per_validate value.\n" .
         "RESULTS: " . $builder->get_file . " = " . $$value . "%\n";
 }
 
 # check if features have gene annotations and return
-# updated version
 my $geneGVF = $builder->geneFind($feature);
 
-# build relationship to data in GeneDatabase.db
-my $test = $builder->gvfRelationBuild($geneGVF);
+# build relationship to data in dbSNP and GeneDatabase.db
+my $clin = $builder->gvfRelationBuild($geneGVF);
 
+# send clin data to be printed out as requested.
+#$builder->exporter($clin);
 
-
-
-
-foreach my $i (@{$test}){
-    foreach (@{$i->{'attribute'}->{'clin'}}){
-        print Dumper($_);
-    }
-}
-
+print Dumper($clin);
 
 
 
@@ -48,87 +45,6 @@ foreach my $i (@{$test}){
 
 
 
-
-
-
-
-
-
-
-
-__END__
-my ( $gvf, $help, $valadate, $per, $tabix, $noVal );
  
-my $result = GetOptions(
-    'gvf=s'     => \$gvf,
-    'percent=s' => \$per,
-    'tbx=s'     => \$tabix,
-    'noVal'     => \$noVal,
-    'help'      => \$help,
-) || die $usage;
-
-
-my $app = GVF::Build->new_with_options();
-
-if ( $help ){ die $usage }
-
-if ( $gvf ) {
-
-
-    my $file;
-    if ( $per ){
-        # Make new object for gvf file.
-        $file = GVF::Build->new(
-            gvf_file      => $gvf,
-        );
-        $file->set_ref_match($per);
-    }
-    else {
-        # Make new object for gvf file.
-        $file = GVF::Build->new(
-            gvf_file   => $gvf,
-        );
-    }
-
- if ( ! $noVal )
- {
-    # valadate the file for gene information and reference match
-    my ($valid, $hasGene, $match) = $file->gvf_valadate;
-
-    # if fasta match is not met, the file will not be added, and the program will die.
-    if (  ! $$valid  ) {
-        die "\n Your GVF file does not match the reference at ", $file->get_ref_match,
-            "% it will not be added to the database\n\n Match percent: ", int($$match), "%\n\n";
-    }
-    elsif ( $$valid && $$hasGene ){
-        print "
-               File matches at ", $file->get_ref_match, "% and contains gene annotations.
-               File will be added to database.
-        \n\n";
-        # add file to db
-        $file->populate_gvf_data;
-    }
-    else {
-        #if ( $tabix ){
-            print "\nLooking for gene matches using NCBI current feature build file\nMatch percent: ", int($$match), "%\n\n";
-            #$file->tabix_build($tabix);
-            $file->tabix_build;
-        #}
-        #else {
-         #   print "\nFile has no gene information via Varient_effect, please include tabix file\n\n$usage";
-        #}
-    }
- }
- elsif ( $noVal) {
-    $file->populate_gvf_data;
- }
-}
-
-else {
-    print "
-        Unable to add GVF file to database, please check files and include all required options.
-        \n$usage\n";
-}
-
 
 
