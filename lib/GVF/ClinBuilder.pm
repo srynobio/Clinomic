@@ -20,6 +20,7 @@ has 'file' => (
     reader   => 'get_file',
     writer   => 'set_file',
     required => 1,
+    documentation => q(This is the location of the GVF file you want to convert to GVFClin. Only required option.),
 );
 
 has 'fasta_file' => (
@@ -27,13 +28,15 @@ has 'fasta_file' => (
     isa     => 'Str',
     reader  => 'get_fasta',
     default => '../data/genomes/hg19.fa',
+    documentation => q(The location of desired reference fasta file.  Default is hg19.fa),
 );
 
-has 'per_validate' => (
+has 'validate' => (
     is      => 'rw',
     isa     => 'Int',
     reader  => 'get_percent',
     default => '80',
+    documentation => q(Validate percentage compared to reference genome(ref_GRCh37).  Seqid much be in form chr#.  Default is 80%. ),
 );
 
 has 'tabix_gene' => (
@@ -41,6 +44,7 @@ has 'tabix_gene' => (
     isa     => 'Str',
     reader  => 'get_gene_tabix',
     default => '../data/genomes/GRCh37.p5_top_level.gff3.bgz',
+    documentation => q(Tabix created file to search for genes based on GVF files coordinates.),
 );
 
 has 'tabix_dbsnp' => (
@@ -48,6 +52,7 @@ has 'tabix_dbsnp' => (
     isa     => 'Str',
     reader  => 'get_db_tabix',
     default => '../data/dbSNP/dbsnp.bgz',
+    documentation => q(Tabix created file to search for RSIDs based on GVF files coordinates.),
 );
 
 has 'pragma' => ( 
@@ -59,7 +64,7 @@ has 'pragma' => (
     predicate => 'has_pragmas',
 );
 
-has 'term_switch' => (
+has 'tag_switch' => (
     traits    => ['Hash'],
     is        => 'rw',
     isa       => 'HashRef',
@@ -68,13 +73,15 @@ has 'term_switch' => (
         termExist => 'exists',
         access    => 'accessor',
     },
+    documentation => q(Allows change in feature attribute tag from term to GVFClin term.  Example: Classification=Clin_disease_interpret.),
 );
 
 has 'export' => (
     is      => 'rw',
     isa     => 'Str',
     reader  => 'get_export',
-    default => 'gvf',
+    default => 'GVFClin',
+    documentation => q(Export new GVFClin data via GVFClin, XML or Both.  Default GVFClin.)
 );
 
 # rewrite dbixclass att to use with builder scripts.
@@ -86,17 +93,17 @@ has '+dbixclass' => (
         my $file = basename($self->get_file);
         $file =~ s/()\.gvf/$1.db/;
     
-        if ( -f "../data/$file" ){
+        if ( -f "$file" ){
             $dbix = GVF::DB::Connect->connect({
-                    dsn =>"dbi:SQLite:../data/$file",
-                    on_connect_do => "ATTACH DATABASE '../data/GeneDatabase.db' as GeneDatabase"
+                    dsn =>"dbi:SQLite:$file",
+                    on_connect_do => "ATTACH DATABASE 'GeneDatabase.db' as GeneDatabase"
             });
         }
         else {
-            system("sqlite3 ../data/$file < ../data/mysql/GVFClinSchema.sql");
+            system("sqlite3 $file < ../data/mysql/GVFClinSchema.sql");
             $dbix = GVF::DB::Connect->connect({
-                    dsn =>"dbi:SQLite:../data/$file",
-                    on_connect_do => "ATTACH DATABASE '../data/GeneDatabase.db' as GeneDatabase"
+                    dsn =>"dbi:SQLite:$file",
+                    on_connect_do => "ATTACH DATABASE 'GeneDatabase.db' as GeneDatabase"
             });
         }
         $self->set_dbixclass($dbix);
@@ -113,7 +120,7 @@ sub build_gvf {
     my $feature_line = $self->_file_splitter('feature');
     
     # extract out pragmas and store them in object;
-    $self->pragmas;
+    $self->_pragmas;
     
     my ( @return_list );
     foreach my $lines( @{$feature_line} ) {
@@ -150,12 +157,11 @@ sub build_gvf {
 
 #-----------------------------------------------------------------------------
 
-sub pragmas {
+sub _pragmas {
     my $self = shift;
     
     # grab only pragma lines
     my $pragma_line = $self->_file_splitter('pragma');
-    warn "File contains no pragmas\n" if ! $pragma_line;
         
     my %p;
     foreach my $i( @{$pragma_line} ) {
@@ -165,6 +171,18 @@ sub pragmas {
         $tag =~ s/\-/\_/g;
         
         $p{$tag} = [] unless exists $p{$tag};
+    
+        # if value has multiple tag value pairs, split them.
+        if ( $value =~ /\=/){
+            my @lines = split/;/, $value;
+            
+            my %test;
+            map {
+                my($tag, $value) = split/=/, $_;
+                $test{$tag} = $value;
+            }@lines;
+            $value = \%test
+        }
         push @{$p{$tag}}, $value;
     }
     $self->set_pragmas(\%p);
@@ -179,7 +197,7 @@ sub gvfValadate {
     my $db = Bio::DB::Fasta->new( $self->get_fasta, -debug=>1 ) || die "Fasta file not found $@\n";
     
     my ( $correct, $mismatch, $total);
-    my $noRef = '0';
+    my $noRef = 0;
     foreach my $i ( @{$data} ) {
     
         # keep track of the total number of lines in file.     
@@ -220,7 +238,7 @@ sub gvfValadate {
 sub geneFind {
     
     my ($self, $gvf) = @_;
-    my $xcl = $self->get_dbixclass;
+    ##my $xcl = $self->get_dbixclass;
 
     my @hColumns = qw/ symbol id /;
     my $hgnc = $self->xclassGrab('Hgnc_gene', \@hColumns);
@@ -349,8 +367,8 @@ sub gvfRelationBuild {
         }
     }
     # Call to add rsid from dbSNP file if found.
-    my $clinGVF = $self->snpMatch($gvf);
-    
+    my $clinGVF = $self->_snpMatch($gvf);    
+
     # add db clin informaton to gvf file.
     foreach my $t (@{$clinGVF}) {
         
@@ -370,21 +388,22 @@ sub gvfRelationBuild {
             my $ref = $genedata{$gene};
             
             my $clin = {
-                clin_gene              => $gene,
-                omim_id                => $ref->[0]->{'omim'},
-                clin_transcript        => $ref->[0]->{'transcript'},
-                clin_genomic_reference => $ref->[1]->{'genomic_ref'},
-                clin_HGVS_protein      => $ref->[1]->{'HGVS_protein'},
+                Clin_gene              => $gene,
+                Omim_id                => $ref->[0]->{'omim'},
+                Clin_transcript        => $ref->[0]->{'transcript'},
+                Clin_genomic_reference => $ref->[1]->{'genomic_ref'},
+                Clin_HGVS_protein      => $ref->[1]->{'HGVS_protein'},
             };
             $t->{'attribute'}->{'clin'} = $clin;
         }
     }
+    $clinGVF = $self->_typeCheck($gvf);
     return $clinGVF;
 }
 
 #------------------------------------------------------------------------------
 
-sub snpMatch {
+sub _snpMatch {
     my ($self, $gvf) = @_;
     
     # create tabix object
@@ -413,7 +432,7 @@ sub snpMatch {
             
             # add rsid file to gvf if found
             if ($i->{'start'} eq $start2){
-                $i->{'attribute'}->{'clin_variant_id'} = $rsid;
+                $i->{'attribute'}->{'Clin_variant_id'} = $rsid;
             }
         }
     }
@@ -425,21 +444,42 @@ sub snpMatch {
 sub termUpdate {
     my ($self, $gvf) = @_;
 
-    # takes the list of values from term_switch and looks in $gvf hash
+    # Takes the list of values from term_switch and looks in $gvf hash
     # for the value, then replaces with new key and deletes the old one.
     my @returnList;
     foreach my $i ( @{$gvf} ){
-        my $atts = $i->{'attribute'};        
     
         while ( my($k, $v) = each %{$i->{'attribute'}} ){
             if ( $self->termExist($k) ){
-                $i->{'attribute'}->{$self->access($k)} = $v;
+                $i->{'attribute'}->{'clin'}->{$self->access($k)} = $v;
                 delete $i->{'attribute'}->{$k};
             }
         }
         push @returnList, $i; 
     }
     return \@returnList;
+}
+
+#------------------------------------------------------------------------------
+
+sub _typeCheck {
+    my ($self, $gvf) = @_;
+    
+    my @variantType = qw(deletion wild-type duplication insertion
+                         inversion substitution indel);
+
+    foreach my $i (@{$gvf}){
+        chomp $i;
+        
+        my $type = lc($i->{'type'});
+        
+        foreach (@variantType){
+            if ($type eq $_){
+                $i->{'attribute'}->{'clin'}->{'Clin_variant_type'} = $type;
+            }
+        }
+    }
+    return $gvf;
 }
 
 #------------------------------------------------------------------------------

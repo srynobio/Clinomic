@@ -3,21 +3,17 @@ use strict;
 use warnings;
 use lib '/home/srynearson/GVF-Clin/lib';
 use GVF::ClinBuilder;
+use File::Basename;
 
 use Data::Dumper;
 
 our ($VERSION) = '0.0.1';
-
 
 # obj building.
 my $builder = GVF::ClinBuilder->new_with_options();
 
 # capture gvf data
 my $feature = $builder->build_gvf;
-
-if ($builder->need_switch){
-    $feature = $builder->termUpdate($feature);    
-}
 
 # valadate file entered, required.
 my $value = $builder->gvfValadate($feature);
@@ -33,18 +29,23 @@ my $geneGVF = $builder->geneFind($feature);
 # build relationship to data in dbSNP and GeneDatabase.db
 my $clin = $builder->gvfRelationBuild($geneGVF);
 
+# section which allow you to term_switch.
+if ($builder->need_switch){
+    $feature = $builder->termUpdate($feature);    
+}
+
 # send clin data to be printed out as requested.
-#$builder->exporter($clin);
+$builder->exporter($clin);
 
-print Dumper($clin);
+# Complete the xml file if option was requested.
+if ( $builder->get_export ne 'GVFClin') {
+    $builder->completeXML;
+}
 
-
-
-
-
-
-
-
- 
+# At the moment a sqlite3 file is made but not populated with data
+# may add feature back in.
+my $file = basename($builder->get_file);
+$file =~ s/()\.gvf/$1.db/;
+system("rm $file");
 
 

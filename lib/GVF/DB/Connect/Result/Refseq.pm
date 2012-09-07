@@ -12,8 +12,6 @@ __PACKAGE__->table("Refseq");
 __PACKAGE__->add_columns(
   "id",
   { data_type => "integer", is_nullable => 0 },
-  "position",
-  { data_type => "integer", is_nullable => 1 },
   "genomic_refseq",
   { data_type => "varchar", is_nullable => 1, size => 25 },
   "protein_refseq",

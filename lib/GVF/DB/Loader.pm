@@ -1,6 +1,7 @@
 package GVF::DB::Loader;
 use Moose::Role;
 use Carp;
+use namespace::autoclean;
 use GVF::DB::Connect;
 
 #-----------------------------------------------------------------------------
@@ -17,12 +18,12 @@ has 'dbixclass' => (
         my $self = shift;
         my $dbix;
         
-        if ( -f '../data/GeneDatabase.db' ){
+        if ( -f 'GeneDatabase.db' ){
             die "\nGeneDatabase already exists\n";
         }
         else {
-            system("sqlite3 ../data/GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
-            $dbix = GVF::DB::Connect->connect('dbi:SQLite:../data/GeneDatabase.db');
+            system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
+            $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
         }
         $self->set_dbixclass($dbix);
     },
@@ -66,7 +67,6 @@ sub _populate_refseq {
     my ($self, $ref) = @_;
     my $xcl = $self->get_dbixclass;
 
-    #my @hColumns = qw/ transcript_refseq id  /;
     my @hColumns = qw/ symbol id  /;
     my $trans_id = $self->xclassGrab('Hgnc_gene', \@hColumns);
     
@@ -153,62 +153,6 @@ sub _populate_drug_info {
 }
 
 #------------------------------------------------------------------------------
-
-## start of the ClinBuilder methods ##
-
-use Data::Dumper;
-
-sub _populate_gvf_data {
-    my $self = shift;   
-
-    my $gvf = $self->get_gvf_data;
-    print Dumper($gvf);
-
-
-
-=cut    
-    # build feature db.
-    foreach my $i ( @{$match} ) {
-        $xcl->resultset('GVFClin')->create({
-            seqid  => $i->[0]->{'seqid'},
-            source => $i->[0]->{'source'},
-            type   => $i->[0]->{'type'},
-            start  => $i->[0]->{'start'},
-            end    => $i->[0]->{'end'},
-            score  => $i->[0]->{'score'},
-            strand => $i->[0]->{'strand'},
-            phase  => $i->[0]->{'phase'},
-            attributes_id     => $i->[0]->{'attribute'}->{'ID'},
-            alias             => $i->[0]->{'attribute'}->{'Alias'},
-            dbxref            => $i->[0]->{'attribute'}->{'Dbxref'},
-            variant_seq       => $i->[0]->{'attribute'}->{'Variant_seq'},
-            reference_seq     => $i->[0]->{'attribute'}->{'Reference_seq'},
-            variant_reads     => $i->[0]->{'attribute'}->{'Variant_reads'},
-            total_reads       => $i->[0]->{'attribute'}->{'Total_reads'},
-            zygosity          => $i->[0]->{'attribute'}->{'Zygosity'},
-            variant_freq      => $i->[0]->{'attribute'}->{'Variant_freq'},
-            start_range       => $i->[0]->{'attribute'}->{'Start_range'},
-            end_range         => $i->[0]->{'attribute'}->{'End_range'},
-            phased            => $i->[0]->{'attribute'}->{'Phased'},
-            genotype          => $i->[0]->{'attribute'}->{'Genotype'},
-            individual        => $i->[0]->{'attribute'}->{'Individual'},
-            variant_codon     => $i->[0]->{'attribute'}->{'Variant_codon'},
-            reference_codon   => $i->[0]->{'attribute'}->{'Reference_codon'},
-            variant_aa        => $i->[0]->{'attribute'}->{'Variant_aa'},
-            breakpoint_detail => $i->[0]->{'attribute'}->{'Breakpoint_detail'},
-            sequence_context  => $i->[0]->{'attribute'}->{'Sequence_context'},
-        });
-    }
-=cut    
-    
-    
-    
-    
-    
-}
-
-#------------------------------------------------------------------------------
-
 
 
 1;

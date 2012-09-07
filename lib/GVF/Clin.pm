@@ -1,15 +1,17 @@
 package GVF::Clin;
 use Moose;
 use Moose::Util::TypeConstraints;
+use namespace::autoclean;
 use Carp;
 
 with 'GVF::Roles';
-
+with 'MooseX::Getopt';
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
-
+    
 has 'data_directory' => (
+    traits    =>['NoGetopt'],
     is       => 'rw',
     isa      => 'Str',
     default  => '../data/',
@@ -18,15 +20,16 @@ has 'data_directory' => (
 );
 
 has 'build_database' => (
+    traits    =>['NoGetopt'],
     is         => 'rw',
     isa        => 'Int',
     trigger => \&_build_database,
 );
 
 
+__PACKAGE__->meta->make_immutable;
+
 1;
-
-
 
 
 __END__

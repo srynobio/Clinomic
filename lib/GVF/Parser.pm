@@ -1,6 +1,7 @@
 package GVF::Parser;
 use Moose::Role;
 use Carp;
+use namespace::autoclean;
 use IO::File;
 
 #------------------------------------------------------------------------------
