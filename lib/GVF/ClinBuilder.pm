@@ -80,9 +80,11 @@ has 'export' => (
     is      => 'rw',
     isa     => 'Str',
     reader  => 'get_export',
-    default => 'GVFClin',
-    documentation => q(Export new GVFClin data via GVFClin, XML or Both.  Default GVFClin.)
+    default => 'gvfclin',
+    documentation => q(Export new GVF data to various formats.  gvfclin, xml, gvfgtr, all.  Default is gvfclin.)
 );
+
+
 
 # rewrite dbixclass att to use with builder scripts.
 has '+dbixclass' => (
@@ -483,6 +485,25 @@ sub _typeCheck {
 }
 
 #------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 1;
 

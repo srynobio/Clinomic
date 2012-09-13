@@ -170,7 +170,7 @@ sub refseq {
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/) { next }
         
         my $refhash = {
-            symbol => $refs[1],
+            symbol      => $refs[1],
             rna_acc     => $refs[3],
             prot_acc    => $refs[5],
             genomic_acc => $refs[7],

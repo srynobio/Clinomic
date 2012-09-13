@@ -31,15 +31,20 @@ sub exporter {
     
     my $type = $self->get_export;
     
-    if ($type eq 'GVFClin'){
+    if ($type eq 'gvfclin'){
         $self->toGVF($gvf);
     }
-    elsif ( $type eq 'XML'){
+    elsif ( $type eq 'xml'){
         $self->toXML($gvf);
     }
-    elsif( $type eq 'Both'){
+    elsif ($type eq 'gvfgtr'){
+        $self->toGTR;
+    }
+    elsif( $type eq 'all'){
         $self->toGVF($gvf);
         $self->toXML($gvf);
+        $self->completeXML if $self->get_export ne 'gvfclin';
+        $self->toGTR($gvf);
     }
 }
 
@@ -50,7 +55,9 @@ sub toGVF {
 
     # get the file name
     my $basename = basename($self->get_file, ".gvf");
-    my $outFH = IO::File->new("$basename.gvfclin", 'a+');
+    my $outfile  = "$basename" . '.gvfclin';
+    
+    my $outFH = IO::File->new("$outfile", 'a+');
     
     # check for pragama values.
     my $pragma;
@@ -165,6 +172,7 @@ sub simplePragmaXML {
             variant_calling                      => sub {$_->set_text($p->{'variant_calling'}[0])},
             variant_calling                      => sub {$_->set_text($p->{'variant_calling'}[0])},
             genomic_source                       => sub {$_->set_text($p->{'genomic_source'}[0])},
+            multi_individual                     => sub {$_->set_text($p->{'multi_individual'}[0])},
         },
     );
     $twig->parsefile($self->get_xmlTemp);
@@ -349,14 +357,17 @@ sub completeXML {
     my $basename = basename($self->get_file, ".gvf");
     
     my $xmlFH  = IO::File->new('temp.xml', 'r') || die "XML temp file not found\n";
-    my $xmlNEW = IO::File->new("$basename.xml", 'a+');
+    my $outfile = "$basename" . '.xml';
+    
+    my $xmlNEW = IO::File->new("$outfile", 'a+');
     
     print $xmlNEW '<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE GVFClin SYSTEM "GVFClin.dtd">
-<?xml-stylesheet type="text/xsl" href="GVFClin"?>
+<?xml-stylesheet type="text/xsl" href="GVF-CDA-GTR.xsl"?>
 <GVFClin>';
     
     while( <$xmlFH> ) {
+        # Only print lines which have data
+        if ( $_ =~ /(><\/)/) { next }
         print $xmlNEW $_;
     }
     print $xmlNEW "\n</GVFClin>\n";
@@ -370,6 +381,23 @@ sub completeXML {
 
 #-----------------------------------------------------------------------------
 
+sub toGTR {
+    my ($self, $gvf) = @_;
+    
+    # get the file name
+    my $basename = basename($self->get_file, ".gvf");
+    my $outfile = "$basename" . '-GTR.xml';
+    
+    my $outFH = IO::File->new("$outfile", 'r');
+    
+    # get xml file to use for XSLT
+    my $xmlFile = "$basename" . ".xml";
 
+    # use Saxon to do transformation.
+    system("java -jar Saxon/saxon9he.jar -xsl:../data/XML/GVF-CDA-GTR.xsl -s:$xmlFile -o:$outfile");
+}
+
+#-----------------------------------------------------------------------------
 
 1;
+
