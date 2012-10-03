@@ -19,11 +19,10 @@ sub hgnc {
     foreach my $line ( <$hgnc_fh> ){
         chomp $line;
         
-        next if $line =~ /^HGNC\s+ID/;
+        next if $line !~ /^HGNC:(\d+)/;
         my ( undef, $symbol, $name, $chromo, $acc_numb, $pubmed, $refseqid, $omim, $refseq ) = split /\t/, $line;
- 
+        
         if ( ! $symbol ){ next }
-        if ( ! $refseqid ) { next }
         
         my $hgnc = {
             symbol  => $symbol,
@@ -67,14 +66,13 @@ sub genetic_association {
         push @gene_asso, $gene_asso;
     }
     $genetic_assos_fh->close;
-    
     $self->_populate_genetic_assoc(\@gene_asso);
 }
 
 #------------------------------------------------------------------------------
 
 sub clinvar {
-    my $self = shift;
+    my ($self, $request) = @_;
         
     # uses the file to collect clinvar information 
     my $clinvar_file = $self->get_directory . "/" . 'ClinVar' . "/" . "gene_condition_source_id";
@@ -88,7 +86,7 @@ sub clinvar {
     
         # some clean up and checking
         next if ! $symbol;    
-        if ( $source ne 'SNOMEDCT') { next }
+        if ( $source ne 'SNOMEDCT' && $request ) { next }
     
         my $var_file = {
             symbol    => $symbol,
@@ -102,7 +100,8 @@ sub clinvar {
     }
     $clinvar_fh->close;
     
-    $self->_populate_clinvar(\@clinvar_list);
+    if ($request eq 'populate') { $self->_populate_clinvar(\@clinvar_list); }
+    else { return \@clinvar_list; }
 }
 
 #------------------------------------------------------------------------------
@@ -114,13 +113,13 @@ sub drug_bank {
     # better then contacting your dealer.
     my $drug_file = $self->get_directory . "/" . 'Drug_Bank' . "/" . "drugbank.txt";
     my $drug_fh   = IO::File->new($drug_file, 'r') || die "Can not open Drug_Bank/drugbank.txt file\n";
-
-    $/ = '#';
+    
+    local $/ = '#';
     my ( $drug, $target, $hgnc, @dbank );
     
     foreach my $line ( <$drug_fh> ){
         chomp $line;
-
+    
         $line =~ s/\n//g;
         $line =~ s/^\s//g;
         
@@ -132,7 +131,7 @@ sub drug_bank {
         }
         elsif ( $line =~ /^Drug_Target_1_HGNC_ID:(.*)/ ) {
             $hgnc = $1;
-
+    
             my $drug = {
                 drug   => $drug,
                 symbol => $target,
@@ -142,7 +141,6 @@ sub drug_bank {
         else { next }
     }
     $drug_fh->close;
-    
     $self->_populate_drug_info(\@dbank);
 }
 
@@ -150,8 +148,6 @@ sub drug_bank {
 
 sub refseq {
     my $self = shift;
-    
-    my $xcl = $self->get_dbixclass;
     
     # uses the relationship file to collect refseq information 
     my $ref_file = $self->get_directory . "/" . 'NCBI_Gene' . "/" . "UpdatedRefSeq.txt";
@@ -178,11 +174,61 @@ sub refseq {
         push @refseq, $refhash;
     }
     $ref_fh->close;
-    
     $self->_populate_refseq(\@refseq);    
 }
 
 #------------------------------------------------------------------------------
 
+sub clinInterpret {
+    my $self = shift;
+        
+    # uses the file to collect clinvar information 
+    my $clinInt_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_20120616.vcf";
+    my $clinInt_fh   = IO::File->new($clinInt_file, 'r') || die "Can not open ClinVar/clinvar_20120616.vcf file\n";
+    
+    my @clinSig;
+    foreach my $line ( <$clinInt_fh> ){
+        chomp $line;
+    
+        # meta data means nothing to me!
+        if ($line =~ /^#{1,}/){ next }
+        if ($line !~ /^chr/){ next }
+        
+        my ($chrom, $pos, $id, $ref, $var, undef, undef, $info) = split /\t/, $line;
+        
+        # grep only what were looking for    
+        my @infoList = split(/\;/, $info);
+        my @clinList = grep { $_ =~ /CLNCUI/ || /CLNHGVS/ || /CLNSIG/ || /GENEINFO/ }@infoList;
+        
+        # split up the clin data        
+        my %atts;
+        foreach my $i (@clinList) {
+             $i =~ /^(.*)=(.*)/g;
+             my $tag   = $1;
+             my $value = $2;
+             
+             if ($tag eq 'GENEINFO'){
+                my ($gene, undef) = split/:/, $value;
+                $value = $gene;
+             }
+             $atts{$tag} = $value;
+        }
+        # hashref of parts.
+        my $t = {
+            chr       => $chrom,
+            pos       => $pos,
+            rsid      => $id,
+            ref_seq   => $ref,
+            var_seq   => $var,
+            clin_data => \%atts,
+        };
+        push @clinSig, $t;
+    }
+    $clinInt_fh->close;
+    $self->_populate_clinInterpret(\@clinSig);
+}
 
+#------------------------------------------------------------------------------
+
+no Moose;
 1;

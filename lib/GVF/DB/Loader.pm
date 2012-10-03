@@ -8,6 +8,27 @@ use GVF::DB::Connect;
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
 
+#has 'dbixclass' => (
+#    is      => 'rw',
+#    isa	    => 'Object',
+#    reader  => 'dbixclass',
+#    writer  => 'set_dbixclass',
+#    reader  => 'get_dbixclass',
+#    default => sub {
+#        my $self = shift;
+#        my $dbix;
+#        
+#        if ( -f 'GeneDatabase.db' ){
+#            die "\nGeneDatabase already exists\n";
+#        }
+#        else {
+#            system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
+#            $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
+#        }
+#        $self->set_dbixclass($dbix);
+#    },
+#);
+
 has 'dbixclass' => (
     is      => 'rw',
     isa	    => 'Object',
@@ -16,18 +37,11 @@ has 'dbixclass' => (
     reader  => 'get_dbixclass',
     default => sub {
         my $self = shift;
-        my $dbix;
-        
-        if ( -f 'GeneDatabase.db' ){
-            die "\nGeneDatabase already exists\n";
-        }
-        else {
-            system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
-            $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
-        }
+        my $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
         $self->set_dbixclass($dbix);
     },
 );
+
 
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
@@ -35,13 +49,27 @@ has 'dbixclass' => (
 
 sub _build_database {
     my $self = shift;
+    my $dbix;
+    
+    # ------------------------------
+    if ( -f 'GeneDatabase.db' ){
+        die "\nGeneDatabase already exists\n";
+    }
+    else {
+        system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
+        $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
+    }
+    $self->set_dbixclass($dbix);
+
+    # ------------------------------
     
     warn "Building Database\n";
     $self->hgnc;
     $self->refseq;
     $self->genetic_association;
-    $self->clinvar;
+    $self->clinvar('populate');
     $self->drug_bank;
+    $self->clinInterpret;
 }
 
 #------------------------------------------------------------------------------
@@ -131,6 +159,7 @@ sub _populate_clinvar {
         $xcl->resultset('Clinvar')->create({
             umls_concept_id => $i->[0]->{'umls'},
             snomed_id       => $i->[0]->{'source_id'},
+            disease         => $i->[0]->{'disease'},
             hgnc_gene_id    => $i->[1],
         });
     }
@@ -154,7 +183,42 @@ sub _populate_drug_info {
 
 #------------------------------------------------------------------------------
 
+sub _populate_clinInterpret {
+    my ($self, $clin) = @_;
+    
+    my $xcl = $self->get_dbixclass;
+    
+    my @hColumns = qw/ symbol omim_id id  /;
+    my $trans_id = $self->xclassGrab('Hgnc_gene', \@hColumns);
+    
+    my @transcript;
+    while ( my $result = $trans_id->next ){
+        my $list = {
+            symbol => $result->symbol,
+            id     => $result->id,
+            omim   => $result->omim_id,
+        };
+        push @transcript, $list; 
+    }
+    my $match = $self->match_builder($clin, \@transcript, 'clinInterpt');
 
+    foreach my $i ( @{$match} ){
+        $xcl->resultset('Clinvar_clin_sig')->create({
+            ref_seq  => $i->[0]->{'ref_seq'},
+            var_seq  => $i->[0]->{'var_seq'},
+            rsid     => $i->[0]->{'rsid'},
+            location => $i->[0]->{'pos'},
+            clnsig   => $i->[0]->{'clin_data'}->{'CLNSIG'},
+            clncui   => $i->[0]->{'clin_data'}->{'CLNCUI'},
+            clnhgvs  => $i->[0]->{'clin_data'}->{'CLNHGVS'},
+            hgnc_gene_id => $i->[1]->{'id'},
+        });
+    }
+}
+
+#------------------------------------------------------------------------------
+
+no Moose;
 1;
 
 

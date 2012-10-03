@@ -16,6 +16,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 25 },
   "snomed_id",
   { data_type => "varchar", is_nullable => 1, size => 25 },
+  "disease",
+  { data_type => "varchar", is_nullable => 1, size => 45 },  
   "hgnc_gene_id",
   {
     accessor       => "hgnc_gene_id",

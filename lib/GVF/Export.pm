@@ -7,7 +7,6 @@ use XML::Twig;
 with 'MooseX::Getopt';
 
 use lib '../lib';
-use Data::Dumper;
 
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
@@ -32,25 +31,32 @@ sub exporter {
     my $type = $self->get_export;
     
     if ($type eq 'gvfclin'){
-        $self->toGVF($gvf);
+        warn "Building GVFClin file.\n";
+        $self->_toGVF($gvf);
     }
-    elsif ( $type eq 'xml'){
-        $self->toXML($gvf);
+    elsif ($type eq 'xml'){
+        warn "Building XML.\n";
+        $self->_toXML($gvf);
+        $self->_completeXML;
     }
-    elsif ($type eq 'gvfgtr'){
-        $self->toGTR;
+    elsif ($type eq 'hl7'){
+        warn "Building HL7-XML file.\n";
+        $self->_toXML($gvf);
+        $self->_completeXML;
+        $self->_toGTR($gvf);
     }
     elsif( $type eq 'all'){
-        $self->toGVF($gvf);
-        $self->toXML($gvf);
-        $self->completeXML if $self->get_export ne 'gvfclin';
-        $self->toGTR($gvf);
+        warn "Building all output files.\n";
+        $self->_toGVF($gvf);
+        $self->_toXML($gvf);
+        $self->_completeXML;
+        $self->_toGTR($gvf);
     }
 }
 
 #-----------------------------------------------------------------------------
 
-sub toGVF {
+sub _toGVF {
     my ($self, $gvf) = @_;
 
     # get the file name
@@ -122,7 +128,7 @@ sub toGVF {
 
 #-----------------------------------------------------------------------------
 
-sub toXML {
+sub _toXML {
     
     # Im guessing, forever from this day I will regret the day I
     # ever knew XML::Twig existed.
@@ -130,16 +136,16 @@ sub toXML {
     my $fh = IO::File->new('temp.xml', 'a+');
 
     if ( keys %{$self->get_pragmas} ){
-        my $spTwig = $self->simplePragmaXML($gvf, $fh);
-        my $stTwig = $self->structPragmaXML($gvf, $fh);
+        my $spTwig = $self->_simplePragmaXML($gvf, $fh);
+        my $stTwig = $self->_structPragmaXML($gvf, $fh);
     }
-    my $featTwig = $self->featureXML($gvf, $fh);
+    my $featTwig = $self->_featureXML($gvf, $fh);
     $fh->close;
 }
 
 #-----------------------------------------------------------------------------
 
-sub simplePragmaXML {
+sub _simplePragmaXML {
     my ($self, $gvf, $fh) = @_;
 
     # get pragma data.    
@@ -181,7 +187,7 @@ sub simplePragmaXML {
 
 #-----------------------------------------------------------------------------
 
-sub structPragmaXML {
+sub _structPragmaXML {
     my ($self, $gvf, $fh) = @_;
     
     # get pragma data.    
@@ -267,7 +273,9 @@ sub structPragmaXML {
 
 #-----------------------------------------------------------------------------
 
-sub featureXML {
+use Data::Dumper;
+
+sub _featureXML {
     my ($self, $gvf, $fh) = @_;
 
     my $twig;
@@ -307,31 +315,16 @@ sub featureXML {
                 sequence_context  => sub {$_->set_text($f->{'attribute'}->{'Sequence_context'})},
                 
                 # Creating variant effect xml data.
-                variant_effect => sub {
-                            $_->insert_new_elt('sequence_variant', $eff->[0]->{'sequence_variant'}),
-                            $_->insert_new_elt('feature_id', $eff->[0]->{'feature_id1'}),
-                            $_->insert_new_elt('sequence_variant', $eff->[0]->{'sequence_variant'}),
-                            $_->insert_new_elt('feature_id', $eff->[0]->{'feature_id2'}),
-                            $_->insert_new_elt('feature_type', $eff->[0]->{'feature_type'}),
-                            
-                            $_->insert_new_elt('sequence_variant', $eff->[1]->{'sequence_variant'}),
-                            $_->insert_new_elt('feature_id', $eff->[1]->{'feature_id1'}),
-                            $_->insert_new_elt('sequence_variant', $eff->[1]->{'sequence_variant'}),
-                            $_->insert_new_elt('feature_id', $eff->[1]->{'feature_id2'}),
-                            $_->insert_new_elt('feature_type', $eff->[1]->{'feature_type'}),
-                    
-                            $_->insert_new_elt('sequence_variant', $eff->[1]->{'sequence_variant'}),
-                            $_->insert_new_elt('feature_id', $eff->[1]->{'feature_id1'}),
-                            $_->insert_new_elt('sequence_variant', $eff->[1]->{'sequence_variant'}),
-                            $_->insert_new_elt('feature_id', $eff->[1]->{'feature_id2'}),
-                            $_->insert_new_elt('feature_type', $eff->[1]->{'feature_type'}),
-                },
+                # This method call will split each of the possible Variant_effects
+                # And build a new twig
+                variant_effect => sub { $self->_variantTwig($eff) },
+               
                 # start of GVFClin features
                 clin_gene                      => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_gene'})},
                 clin_genomic_reference         => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_genomic_reference'})},
                 clin_transcript                => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_transcript'})},
                 clin_allele_name               => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_allele_name'})},
-                clin_variant_id                => sub {$_->set_text($f->{'attribute'}->{'Clin_variant_id'})},
+                clin_variant_id                => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_variant_id'})},
                 clin_HGVS_DNA                  => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'})},
                 clin_variant_type              => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_variant_type'})},
                 clin_HGVS_protein              => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'})},
@@ -339,7 +332,7 @@ sub featureXML {
                 clin_DNA_region                => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_DNA_region'})},
                 clin_allelic_state             => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'clin_allelic_state'})},
                 clin_variant_display_name      => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_variant_display_name'})},
-                clin_disease_interpret         => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_disease_interpret'})},
+                clin_disease_variant_interpret => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'})},
                 clin_drug_metabolism_interpret => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_drug_metabolism_interpret'})},
                 clin_drug_efficacy_interpret   => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_drug_efficacy_interpret'})},
             },
@@ -351,7 +344,23 @@ sub featureXML {
 
 #-----------------------------------------------------------------------------
 
-sub completeXML {
+sub _variantTwig{
+    my ($self, $eff) = @_;
+     
+    my $ct = 1; 
+    foreach my $f (@{$eff}){
+        $_->insert_new_elt("sequence_variant_$ct", $f->{'sequence_variant'}),
+        $_->insert_new_elt("index_$ct", $f->{'index'}),
+        $_->insert_new_elt("feature_type_$ct", $f->{'feature_type'}),
+        $_->insert_new_elt("feature_id1_$ct", $f->{'feature_id1'}),
+        $_->insert_new_elt("feature_id2_$ct", $f->{'feature_id2'}),
+        $ct++;
+    }   
+}
+
+#-----------------------------------------------------------------------------
+
+sub _completeXML {
     my $self = shift;
 
     my $basename = basename($self->get_file, ".gvf");
@@ -381,12 +390,12 @@ sub completeXML {
 
 #-----------------------------------------------------------------------------
 
-sub toGTR {
+sub _toGTR {
     my ($self, $gvf) = @_;
     
     # get the file name
     my $basename = basename($self->get_file, ".gvf");
-    my $outfile = "$basename" . '-GTR.xml';
+    my $outfile = "$basename" . '_hl7.xml';
     
     my $outFH = IO::File->new("$outfile", 'r');
     
@@ -394,10 +403,10 @@ sub toGTR {
     my $xmlFile = "$basename" . ".xml";
 
     # use Saxon to do transformation.
-    system("java -jar Saxon/saxon9he.jar -xsl:../data/XML/GVF-CDA-GTR.xsl -s:$xmlFile -o:$outfile");
+    system("java -jar ../data/Saxon/saxon9he.jar -xsl:../data/XML/GVF-CDA-GTR.xsl -s:$xmlFile -o:$outfile");
 }
 
 #-----------------------------------------------------------------------------
 
+no Moose;
 1;
-

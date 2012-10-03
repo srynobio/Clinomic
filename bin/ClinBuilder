@@ -12,15 +12,16 @@ our ($VERSION) = '0.01';
 # obj building.
 my $builder = GVF::ClinBuilder->new_with_options();
 
-# capture gvf data
-my $feature = $builder->build_gvf;
+# build and capture gvf data.
+my $feature = $builder->gvfParser;
 
 # valadate file entered, required.
 my $value = $builder->gvfValadate($feature);
 if ( $$value <= $builder->get_percent) {
-    die "Reference sequence does not validate at " . $builder->get_percent . "%, " .
-        "Check file or enter lower validate value.\n" .
-        "RESULTS: " . $builder->get_file . " = " . $$value . "%\n";
+    die sprintf ("
+    Reference sequence does not validate to %s%%,
+    Check file or enter lower validate value.
+    RESULTS: %s matches %5.2f%% to reference.\n\n", $builder->get_percent, $builder->get_file, $$value);
 }
 
 # check if features have gene annotations and return
@@ -29,6 +30,8 @@ my $geneGVF = $builder->geneFind($feature);
 # build relationship to data in dbSNP and GeneDatabase.db
 my $clin = $builder->gvfRelationBuild($geneGVF);
 
+#print Dumper($clin);
+#__END__
 # section which allow you to term_switch.
 if ($builder->need_switch){
     $feature = $builder->termUpdate($feature);    
@@ -36,14 +39,6 @@ if ($builder->need_switch){
 
 # send clin data to be printed out as requested.
 $builder->exporter($clin);
-
-# Complete the xml file if option was requested.
-#if ( $builder->get_export ne 'gvfclin') {
-#    $builder->completeXML;
-#}
-
-#$builder->toGTR($feature)
-
 
 # At the moment a sqlite3 file is made but not populated with data
 # may add feature back in.

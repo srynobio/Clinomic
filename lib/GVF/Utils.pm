@@ -86,6 +86,22 @@ sub match_builder {
         }
         return(\@keeper);
     }
+    elsif ($request eq 'clinInterpt'){
+        my %seen;
+        foreach my $i ( @{$b} ){
+            $seen{ $i->{'symbol'} } = $i;
+        }
+    
+        my @keeper;
+        foreach my $e ( @{$a} ) {
+            if (! $e->{'clin_data'}->{'GENEINFO'} ) { next } 
+            my $looking = $e->{'clin_data'}->{'GENEINFO'};
+            if ( $seen{$looking} ) {
+                push @keeper, [ $e, $seen{$looking} ];
+            }
+        }
+        return(\@keeper);
+    }
 }
 
 #------------------------------------------------------------------------------
@@ -148,7 +164,7 @@ sub simple_match {
             id     => $result->id,
         };
         push @symbols, $list; 
-    }    
+    }
     my $match = $self->match_builder($data, \@symbols, 'simple');
     return $match;
 }
@@ -188,9 +204,44 @@ sub _variant_builder {
 
 #------------------------------------------------------------------------------
 
+sub _conceptList {
+    my $self = shift;
+    
+    my $clinData = $self->clinvar;
+    
+    my %concept;
+    foreach my $i ( @{$clinData} ){
+        $concept{$i->{'umls'}} = {
+            gene    => $i->{'symbol'},
+            disease => $i->{'disease'},
+        };
+    }
+    return \%concept;
+}
+
+#------------------------------------------------------------------------------
+
+sub _conceptSplit {
+    my ($self, $data, $hashref) = @_;
+    
+    my @cpList;
+    if ($data =~ /\|/) {
+        my @concept = split /\|/, $data;
+        map { push @cpList, $_; }@concept;
+    }
+    elsif ( $data =~ /\,/) {
+        my @concept = split /\,/, $data;
+        map { push @cpList, $_; }@concept;
+    }
+    else { push @cpList, $data }
+
+    return \@cpList;
+}
+
+#------------------------------------------------------------------------------
 
 
 
 
-
+no Moose;
 1;
