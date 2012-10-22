@@ -4,6 +4,8 @@ use Carp;
 use namespace::autoclean;
 use IO::File;
 
+use Data::Dumper;
+
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
@@ -27,8 +29,6 @@ sub hgnc {
         my $hgnc = {
             symbol  => $symbol,
             chromo  => $chromo,
-            omim_id => $omim,
-            refseq  => $refseqid, 
         };
         push @hgnc_list, $hgnc;
     }
@@ -84,24 +84,24 @@ sub clinvar {
     
         my ( $gene_id, $symbol, $concept, $name, $source, $source_id, $mim ) = split /\t/, $line;
     
-        # some clean up and checking
+        # select only SNOMEDCT terms and terms from UMLS. 
         next if ! $symbol;    
-        if ( $source ne 'SNOMEDCT' && $request ) { next }
+        if ( $source ne 'SNOMEDCT') { next }
+        if ( $concept =~ /^CN(\d+)/) { next }
     
         my $var_file = {
-            symbol    => $symbol,
+            symbol      => $symbol,
             umls      => $concept,
             disease   => $name,
             source    => $source,
             source_id => $source_id,
-            omim_id   => $mim,
         };
         push @clinvar_list, $var_file;
     }
     $clinvar_fh->close;
     
-    if ($request eq 'populate') { $self->_populate_clinvar(\@clinvar_list); }
-    else { return \@clinvar_list; }
+    if ($request) { return \@clinvar_list; }
+    else { $self->_populate_clinvar(\@clinvar_list); }
 }
 
 #------------------------------------------------------------------------------
@@ -166,10 +166,10 @@ sub refseq {
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/) { next }
         
         my $refhash = {
-            symbol      => $refs[1],
-            rna_acc     => $refs[3],
-            prot_acc    => $refs[5],
-            genomic_acc => $refs[7],
+            symbol        => $refs[1],
+            transcript_id => $refs[3],
+            prot_acc      => $refs[5],
+            genomic_acc   => $refs[7],
         };
         push @refseq, $refhash;
     }

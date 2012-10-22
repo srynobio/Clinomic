@@ -15,10 +15,6 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 0, size => 25 },
   "chromosome",
   { data_type => "varchar", is_nullable => 1, size => 25 },
-  "omim_id",
-  { data_type => "varchar", is_nullable => 1, size => 25 },
-  "transcript_refseq",
-  { data_type => "varchar", is_nullable => 1, size => 25 }
 );
 
 __PACKAGE__->set_primary_key("id");

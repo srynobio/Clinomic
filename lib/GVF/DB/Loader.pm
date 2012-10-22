@@ -4,6 +4,8 @@ use Carp;
 use namespace::autoclean;
 use GVF::DB::Connect;
 
+use Data::Dumper;
+
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
@@ -51,9 +53,9 @@ sub _build_database {
     my $self = shift;
     my $dbix;
     
-    # ------------------------------
     if ( -f 'GeneDatabase.db' ){
-        die "\nGeneDatabase already exists\n";
+        ##die "\nGeneDatabase already exists\n";
+        $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
     }
     else {
         system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
@@ -61,13 +63,12 @@ sub _build_database {
     }
     $self->set_dbixclass($dbix);
 
-    # ------------------------------
-    
+    # build all the db sections.
     warn "Building Database\n";
     $self->hgnc;
     $self->refseq;
-    $self->genetic_association;
-    $self->clinvar('populate');
+    $self->genetic_association; 
+    $self->clinvar;
     $self->drug_bank;
     $self->clinInterpret;
 }
@@ -83,8 +84,6 @@ sub _populate_genes {
          $xcl->resultset('Hgnc_gene')->create({
              symbol            => $i->{'symbol'},
              chromosome        => $i->{'chromo'},
-             omim_id           => $i->{'omim_id'},
-             transcript_refseq => $i->{'refseq'},
          });
     }
 }
@@ -110,9 +109,10 @@ sub _populate_refseq {
 
     foreach my $i ( @{$match} ) {
         $xcl->resultset('Refseq')->create({
-            genomic_refseq => $i->[0]->{'genomic_acc'},
-            protein_refseq => $i->[0]->{'prot_acc'},
-            hgnc_gene_id   => $i->[1],
+            genomic_refseq    => $i->[0]->{'genomic_acc'},
+            protein_refseq    => $i->[0]->{'prot_acc'},
+            transcript_refseq => $i->[0]->{'transcript_id'},
+            hgnc_gene_id      => $i->[1],
         });
     }
 }
@@ -152,7 +152,8 @@ sub _populate_clinvar {
             id     => $result->id,
         };
         push @symbols, $list; 
-    } 
+    }
+    
     my $match = $self->match_builder($clin, \@symbols, 'simple');
 
     foreach my $i (@{$match}) {
@@ -188,7 +189,7 @@ sub _populate_clinInterpret {
     
     my $xcl = $self->get_dbixclass;
     
-    my @hColumns = qw/ symbol omim_id id  /;
+    my @hColumns = qw/ symbol id /;
     my $trans_id = $self->xclassGrab('Hgnc_gene', \@hColumns);
     
     my @transcript;
@@ -196,7 +197,6 @@ sub _populate_clinInterpret {
         my $list = {
             symbol => $result->symbol,
             id     => $result->id,
-            omim   => $result->omim_id,
         };
         push @transcript, $list; 
     }
@@ -220,5 +220,3 @@ sub _populate_clinInterpret {
 
 no Moose;
 1;
-
-

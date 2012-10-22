@@ -3,6 +3,8 @@ use Moose::Role;
 use namespace::autoclean;
 use Carp;
 
+use Data::Dumper;
+
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
@@ -205,15 +207,15 @@ sub _variant_builder {
 #------------------------------------------------------------------------------
 
 sub _conceptList {
-    my $self = shift;
-    
-    my $clinData = $self->clinvar;
+    my $self = shift;    
+    my $clinData = $self->clinvar('return');
     
     my %concept;
     foreach my $i ( @{$clinData} ){
         $concept{$i->{'umls'}} = {
-            gene    => $i->{'symbol'},
-            disease => $i->{'disease'},
+            snomed_id => $i->{'source_id'},
+            disease   => $i->{'disease'},
+            gene      => $i->{'symbol'},
         };
     }
     return \%concept;
@@ -222,26 +224,80 @@ sub _conceptList {
 #------------------------------------------------------------------------------
 
 sub _conceptSplit {
-    my ($self, $data, $hashref) = @_;
-    
-    my @cpList;
-    if ($data =~ /\|/) {
-        my @concept = split /\|/, $data;
-        map { push @cpList, $_; }@concept;
-    }
-    elsif ( $data =~ /\,/) {
-        my @concept = split /\,/, $data;
-        map { push @cpList, $_; }@concept;
-    }
-    else { push @cpList, $data }
+    my ($self, $clin, $concept) = @_;
+    my %concept = %$concept;
 
-    return \@cpList;
+    my $cuiLine;
+    if ($clin =~ /\|/) {
+        my @concept = split /\|/, $clin;
+        map {
+            if ( $concept{$_} ){
+                $cuiLine .= "$concept{$_}->{'snomed_id'},";
+            }
+            else { $cuiLine .= '.,'}
+        }@concept;
+    }
+    elsif ( $concept{$clin} ){
+        $cuiLine .= "$concept{$_}->{'snomed_id'}";
+    }
+    else {
+        $cuiLine .= ".";
+    }
+    # clean up end of the line and return ref.
+    $cuiLine =~ s/\,$// if $cuiLine;
+    return \$cuiLine; 
 }
 
 #------------------------------------------------------------------------------
 
+sub _aliasDNACheck {
+    my ($self, $alias) = @_;
 
+    if ( $alias =~ /\,/){
+        ### ???????????????
+        my @hgvs = split /\,/, $alias;
+    }
+    
+    elsif ($alias =~ /HGVS/){
+        my ($tag, $value) = split( /:/, $alias, 2 );
+    
+        if ($value =~ /\:c/ || $value =~ /\:g/ || $value =~ /\:m/){
+            $value =~ s/\s+//;
+            ####print $value, "\n";
+            
+        }
+    }
+}
+#------------------------------------------------------------------------------
 
+sub aaSLC3Letter {
+    my ($self, $code) = @_;
+    
+    my $aaCode = {
+        S => 'Ser', F => 'Phe',
+        L => 'Leu', Y => 'Tyr', 
+        C => 'Cys', W => 'Trp', 
+        P => 'Pro', H => 'His',
+        R => 'Arg', I => 'Ile', 
+        M => 'Met', T => 'Thr', 
+        N => 'Asn', K => 'Lys', 
+        A => 'Ala', Q => 'Gln', 
+        D => 'Asp', E => 'Glu', 
+        G => 'Gly', V => 'Val',
+    };
+    
+    if ($aaCode->{"$code"}){
+        return $aaCode->{$code};
+    }
+    else {
+        if (length $code > 1) { return '?' }
+        elsif ( $code eq '*') { return 'STOP'}
+        elsif ( $code eq '-') { return '?'}
+        else {return $code}
+    }
+}
+
+#------------------------------------------------------------------------------
 
 no Moose;
 1;

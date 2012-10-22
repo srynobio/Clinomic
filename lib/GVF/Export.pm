@@ -73,6 +73,7 @@ sub _toGVF {
 
     # print out pragma values.    
     while (my ($k, $v ) = each %{$pragma}){
+        $k =~ s/\_/\-/g;
         if (ref $v->[0]) {
                 print $outFH "##$k ";
             while (my ($key, $v) = each %{$v->[0]}){
@@ -88,7 +89,7 @@ sub _toGVF {
 
         my $first8 =
         "$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t" .
-        "$i->{'start'}\t$i->{'end'}\t$i->{'score'}\t$i->{'strand'}\t.\t";
+        "$i->{'start'}\t$i->{'end'}\t$i->{'score'}\t$i->{'strand'}\t.";
         
         print $outFH "$first8\t";
         
@@ -403,7 +404,11 @@ sub _toGTR {
     my $xmlFile = "$basename" . ".xml";
 
     # use Saxon to do transformation.
+    # and change gt lt and &amp.
     system("java -jar ../data/Saxon/saxon9he.jar -xsl:../data/XML/GVF-CDA-GTR.xsl -s:$xmlFile -o:$outfile");
+    system("perl -p -i -e 's/&gt;/>/g' $outfile");
+    system("perl -p -i -e 's/&lt;/</g' $outfile");
+    system("perl -p -i -e 's/&amp;/&/g' $outfile");
 }
 
 #-----------------------------------------------------------------------------

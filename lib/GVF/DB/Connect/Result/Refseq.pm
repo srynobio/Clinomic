@@ -16,6 +16,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 25 },
   "protein_refseq",
   { data_type => "varchar", is_nullable => 1, size => 25 },
+  "transcript_refseq",
+  { data_type => "varchar", is_nullable => 1, size => 25 },
   "hgnc_gene_id",
   {
     accessor       => "hgnc_gene_id",
