@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use lib '/home/srynearson/GVF-Clin/lib';
-use GVF::Clin;
+use lib '/home/srynearson/Clinomic/lib';
+use Clin::Base;
 use Getopt::Long;
 
 our $VERSION  = '0.0.1';
@@ -33,13 +33,13 @@ if ( ! $sqlite_check ) { die "sqlite3 is required\n"; }
 # Building db object.
 my $db;
 if ( $db_lib) {
-    $db = GVF::Clin->new(
+    $db = Clin::Base->new(
         data_directory => $db_lib,
         build_database => 1,
     );
 }
 else{
-    $db = GVF::Clin->new(
+    $db = Clin::Base->new(
         build_database => 1,
     );        
 }

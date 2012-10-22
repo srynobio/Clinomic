@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use lib '/home/srynearson/GVF-Clin/lib';
-use GVF::ClinBuilder;
+use lib '/home/srynearson/Clinomic/lib';
+use Clin::Constructor;
 use File::Basename;
 
 use Data::Dumper;
@@ -10,7 +10,7 @@ use Data::Dumper;
 our ($VERSION) = '0.01';
 
 # obj building.
-my $builder = GVF::ClinBuilder->new_with_options();
+my $builder = Clin::Constructor->new_with_options();
 
 # build and capture gvf data.
 my $feature = $builder->gvfParser;
