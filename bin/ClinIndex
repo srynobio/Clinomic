@@ -7,11 +7,11 @@ our $VERSION = (0.0.1);
 
 
 ## Directory check ##
-unless ( -d '../testDir' ) { die "\n../testDir needed to run this script.\n" }
-system("mkdir ../testDir/GFF");
-system("mkdir ../testDir/dbSNP");
-system("mkdir ../testDir/ClinVar");
-system("mkdir ../testDir/NCBI");
+unless ( -d '../data' ) { die "\n../data needed to run this script.\n" }
+system("mkdir ../data/GFF");
+system("mkdir ../data/dbSNP");
+system("mkdir ../data/ClinVar");
+system("mkdir ../data/NCBI");
 
 ## GFF ##
 print "{ClinIndex} Downloading and unpacking GFF file.\n";
@@ -25,7 +25,7 @@ updateGFF();
 `bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz`;
 `tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz`;
 `rm ref_GRCh37.gff3 Updated.ref_GRCh37.gff3`;
-`mv Updated.ref_GRCh37.gff3.gz* ../testDir/GFF`;
+`mv Updated.ref_GRCh37.gff3.gz* ../data/GFF`;
 
 ## DBSNP ##
 print "{ClinIndex} Downloading and unpacking dbSNP file.\n";
@@ -38,7 +38,7 @@ print "{ClinIndex} Indexing dbSNP file.\n";
 `bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz`;
 `tabix -s1 -b2 -e2 Updated.00-All.vcf.gz`;
 `rm 00-All.vcf Updated.00-All.vcf`;
-`mv Updated.00-All.vcf.gz* ../testDir/dbSNP`;
+`mv Updated.00-All.vcf.gz* ../data/dbSNP`;
 
 ## CLINVAR ##
 print "{ClinIndex} Downloading ClinVar files.\n";
@@ -47,7 +47,7 @@ system("mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz");
 system("gunzip clinvar_sigfile.vcf.gz");
 # clinvar gene id file
 system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id");
-`mv clinvar_sigfile.vcf gene_condition_source_id ../testDir/ClinVar/`;
+`mv clinvar_sigfile.vcf gene_condition_source_id ../data/ClinVar/`;
 
 ## NCBI ##
 print "{ClinIndex} Downloading and unzipping NCBI files.\n";
@@ -63,7 +63,7 @@ print "{ClinIndex} Converting NCBI files to work with Clinomic.\n";
 
 # sub to make needed switch to file
 symbolSwitch();
-`mv UpdatedRefSeq.txt gene_info gene2refseq ../testDir/NCBI`;
+`mv UpdatedRefSeq.txt gene_info gene2refseq ../data/NCBI`;
 `rm 00id+symbol 01humanid`;
 
 
