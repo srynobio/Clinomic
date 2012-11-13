@@ -25,15 +25,27 @@ has 'file' => (
     reader   => 'get_file',
     writer   => 'set_file',
     required => 1,
-    documentation => q(This is the location of the GVF file you want to convert to GVFClin. Only required option.),
+    documentation => q(REQUIRED.  Path to the GVF file you want to convert to GVFClin.
+    )
 );
 
 has 'fasta_file' => (
-    is      => 'rw',
-    isa     => 'Str',
-    reader  => 'get_fasta',
-    default => '../data/genomes/hg19.fa',
-    documentation => q(The location of desired reference fasta file.  Default is hg19.fa),
+    is       => 'rw',
+    isa      => 'Str',
+    reader   => 'get_fasta',
+    ##required => 1,
+    documentation => q(REQUIRED.  Path to reference fasta file. Will generate a indexed file.),
+);
+
+has 'gff_file' => (
+    is       => 'rw',
+    isa      => 'Str',
+    reader   => 'get_gff',
+    ####    Updated.ref_model.gff3
+    ##required => 1,
+    ##default => '../data/genomes/GRCh37.p5_top_level.gff3.bgz',
+    #documentation => q(Tabix created file to search for genes based on GVF files coordinates.),
+    documentation => q(REQUIRED.  Path to GFF feature file.  Will generate a indexed file.),
 );
 
 has 'validate' => (
@@ -44,14 +56,6 @@ has 'validate' => (
     documentation => q(Validate percentage compared to reference genome(hg19.fa).  Seqid much be in form chr#.  Default is 90%. ),
 );
 
-has 'tabix_gene' => (
-    is      => 'rw',
-    isa     => 'Str',
-    reader  => 'get_gene_tabix',
-    default => '../data/genomes/GRCh37.p5_top_level.gff3.bgz',
-    documentation => q(Tabix created file to search for genes based on GVF files coordinates.),
-);
-
 has 'tabix_dbsnp' => (
     is      => 'rw',
     isa     => 'Str',
@@ -60,13 +64,13 @@ has 'tabix_dbsnp' => (
     documentation => q(Tabix created file to search for RSIDs based on GVF files coordinates.),
 );
 
-has 'tabix_clinvar' => (
-    is      => 'rw',
-    isa     => 'Str',
-    reader  => 'get_clin_tabix',
-    default => '../data/ClinVar/clinvar_20120616.vcf.bgz',
-    documentation => q(Tabix created file to search for Clin_disease_variant_interpret based on GVF files coordinates, and RSID),
-);
+#has 'tabix_clinvar' => (
+#    is      => 'rw',
+#    isa     => 'Str',
+#    reader  => 'get_clin_tabix',
+#    default => '../data/ClinVar/clinvar_20120616.vcf.bgz',
+#    documentation => q(Tabix created file to search for Clin_disease_variant_interpret based on GVF files coordinates, and RSID),
+#);
 
 has 'pragma' => ( 
     traits    =>['NoGetopt'],
@@ -86,7 +90,8 @@ has 'tag_switch' => (
         termExist => 'exists',
         access    => 'accessor',
     },
-    documentation => q(Allows change in feature attribute tag from term to GVFClin term.  Example: disease=Clin_disease_interpret.),
+    documentation => q(Allows change in feature attribute tag from term to GVFClin term.  Example: disease=Clin_disease_interpret.
+    ),
 );
 
 has 'export' => (
@@ -94,15 +99,15 @@ has 'export' => (
     isa     => 'Str',
     reader  => 'get_export',
     default => 'gvfclin',
-    documentation => q(Export GVF data to various formats.  Options: gvfclin, xml, hl7, all.  Default is gvfclin.)
+    documentation => q(Export GVF data to various formats.  Options: gvfclin, xml, hl7, all.  Default is gvfclin.
+    )
 );
 
 has 'ref_update' =>(
     is        => 'rw',
     isa       => 'Bool',
-    #default   => '0',
     predicate => 'updateRef',
-    documentation => q(Allows in-place change of reference sequence to match current build. Options are 1 or 0, default is 0.  If this option is used validate option not needed.),
+    documentation => q(Allows in-place change of reference sequence to match current build. Options are 1 or 0, default is 0.  If this option is used validate option is not required.),
 );
 
 
@@ -183,6 +188,37 @@ sub gvfParser {
     return \@return_list;
 }
 
+
+#-----------------------------------------------------------------------------
+
+sub gvfRelationBuild {
+    my ($self, $data ) = @_;
+    
+    warn "Valadating GVF file.\n";
+    $self->gvfValadate($data);
+    warn "Building gene relationships.\n";
+    my $stp0 = $self->gvfGeneFind($data);
+    warn "Checking refseq files.\n";
+    my $stp1 = $self->gvfRefBuild($stp0);
+    warn "Checking dbSNP file.\n";
+    my $stp2 = $self->snpCheck($stp1);
+    warn "Checking SO file.\n";
+    my $stp3 = $self->soTypeCheck($stp2);
+    warn "Checking ClinVar file.\n";
+    my $stp4 = $self->sigfCheck($stp3); # where Clin_HGVS_DNA is added ########
+    warn "Checking allelic state.\n";
+    my $stp5 = $self->allelicCheck($stp4);
+
+=cut
+    warn "Checking for hgvs DNA matches.\n";
+    #my $stp6 = $self->hgvsDNACheck($stp5);
+    warn "Checking for hgvs protein matches.\n";
+    #my $stp7 = $self->hgvsProtCheck($stp6);
+=cut
+
+    return $stp5;
+}
+
 #-----------------------------------------------------------------------------
 
 sub gvfValadate {
@@ -209,20 +245,24 @@ sub gvfValadate {
         my $start   = $i->{'start'};
         my $end     = $i->{'end'};
         
-        my $gvfRef = uc($i->{'attribute'}->{'Reference_seq'});
+        my $dataRef = uc($i->{'attribute'}->{'Reference_seq'});
         
-        if ( $gvfRef eq '-'){ $noRef++; next; }
+        if ( $dataRef eq '-'){ $noRef++; next; }
         
         # call to Bio::DB. 
         my $bioSeq = $db->seq("$chr:$start..$end");
         $bioSeq = uc($bioSeq);
         
-        if ( $bioSeq eq $gvfRef ) {
+        if ( $bioSeq eq $dataRef ) {
             $correct++;
         }
         else {
             $mismatch++;
-            # if user wants to update ref to current build this is where it happens.
+            # if user wants to update ref to current fasta build this is where it happens.
+  
+  #### NEED TO CONSIDER DELETION ETC #########            
+  #### AND STRAND INFO #########            
+  
             if ( $self->updateRef ) {
                 $i->{'attribute'}->{'Reference_seq'} = $bioSeq;
                 $correct++;
@@ -234,14 +274,19 @@ sub gvfValadate {
     if ( $mismatch == $total ) { die "No matches were found, possible no Reference_seq in file\n";}
     my $value = ($correct/($total-$noRef)) * 100;
     
-    return \$value;
+    if ( $value <= $self->get_percent) {
+    die sprintf ("
+    Reference sequence does not validate to %s%%,
+    Check file or enter lower validate value.
+    RESULTS: %s matches %5.2f%% to reference.\n\n", $self->get_percent, $self->get_file, $value);
+    }
 }
 
 #------------------------------------------------------------------------------
 
 sub gvfGeneFind {
     
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
 
     my @hColumns = qw/ symbol id /;
     my $hgnc = $self->xclassGrab('Hgnc_gene', \@hColumns);
@@ -266,13 +311,13 @@ sub gvfGeneFind {
             $ncbi{$geneId} = $symbol;
         }
     }
-
+    
     # create tabix object
-    my $tab = Tabix->new(-data => $self->get_gene_tabix) || die "Please input gene Tabix file\n";
+    my $tab = Tabix->new(-data => $self->get_gff) || die "Please input gene Tabix file\n";
 
     # search the golden set file for a match
     my @updateGVF;
-    foreach my $i (@{$gvf}) {
+    foreach my $i (@{$data}) {
 
         # will check to see if file has gene annotation.
         # and skip check if it does.
@@ -337,31 +382,8 @@ sub gvfGeneFind {
 
 #------------------------------------------------------------------------------
 
-sub gvfRelationBuild {
-    my ($self, $gvf ) = @_;
-    
-    warn "Checking refseq files.\n";
-    my $stp1 = $self->gvfRefBuild($gvf);
-    warn "Checking dbSNP file.\n";
-    my $stp2 = $self->snpCheck($stp1);
-    warn "Checking SO file.\n";
-    my $stp3 = $self->soTypeCheck($stp2);
-    warn "Checking ClinVar file.\n";
-    my $stp4 = $self->sigfCheck($stp3); # where Clin_HGVS_DNA is added ########
-    warn "Checking allelic state.\n";
-    my $stp5 = $self->allelicCheck($stp4);
-    warn "Checking for hgvs DNA matches.\n";
-    #my $stp6 = $self->hgvsDNACheck($stp5);
-    warn "Checking for hgvs protein matches.\n";
-    #my $stp7 = $self->hgvsProtCheck($stp6);
-    
-    return $stp5;
-}
-    
-#------------------------------------------------------------------------------
-
 sub gvfRefBuild {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
     my $xcl = $self->get_dbixclass;
 
     # capture data from GeneDatabase sqlite3 file.
@@ -388,7 +410,7 @@ sub gvfRefBuild {
     }
     
     # add db clin informaton to gvf file.
-    foreach my $t (@{$gvf}) {
+    foreach my $t (@{$data}) {
         
         # Collect gene name from gvf file
         my $gene;
@@ -413,18 +435,18 @@ sub gvfRefBuild {
             $t->{'attribute'}->{'clin'} = $clin;
         }
     }
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
 
-sub termUpdate {
-    my ($self, $gvf) = @_;
+sub _termUpdate {
+    my ($self, $data) = @_;
 
-    # Takes the list of values from term_switch and looks in $gvf hash
+    # Takes the list of values from term_switch and looks in $data hash
     # for the value, then replaces with new key and deletes the old one.
     my @returnList;
-    foreach my $i ( @{$gvf} ){
+    foreach my $i ( @{$data} ){
     
         while ( my($k, $v) = each %{$i->{'attribute'}} ){
             if ( $self->termExist($k) ){
@@ -440,12 +462,12 @@ sub termUpdate {
 #------------------------------------------------------------------------------
 
 sub snpCheck {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
     
     # create tabix object
     my $tab = Tabix->new(-data => $self->get_db_tabix) || die "Please input dbSNP Tabix file\n";
     
-    foreach my $i (@{$gvf}){
+    foreach my $i (@{$data}){
     
         my $chr;
         if ( $i->{'seqid'} !~ /^chr/i ){ $chr = "chr". $i->{'seqid'}; }
@@ -454,8 +476,8 @@ sub snpCheck {
         my $start = $i->{'start'};
         my $end   = $i->{'end'};
         
-        my $gvfRef   = $i->{'attribute'}->{'Reference_seq'};
-        my $gvfVar   = $i->{'attribute'}->{'Variant_seq'};
+        my $dataRef   = $i->{'attribute'}->{'Reference_seq'};
+        my $dataVar   = $i->{'attribute'}->{'Variant_seq'};
         
         # check the tabix file for matching regions
         my $iter = $tab->query($chr, $start - 1, $end + 1);
@@ -470,31 +492,32 @@ sub snpCheck {
             my $var    = $rsMatch[4];
             
             # first step clean up
-            if ( $ref ne $gvfRef) { next }
+            if ( $ref ne $dataRef) { next }
             
             if ($var =~ /\,{1,}/){
                 my @refvars = split/,/, $var;
                 foreach (@refvars){
-                    if ( $_ eq $gvfVar){
+                    if ( $_ eq $dataVar){
                         $var = $_;
                     }
                 }
             }
             # add rsid file to gvf if found
-            if ($start eq $start2 && $gvfVar eq $var){
+            if ($start eq $start2 && $dataVar eq $var){
                 $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $rsid;
             }
         }
     }
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
 
 sub soTypeCheck {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
     
-    my $so_fh = IO::File->new('../data/SO/soTermSwitch.txt');
+    my $so_fh = IO::File->new('../data/SO/soTermSwitch.txt', 'r')
+        || die "Can't open soTermSwitch.txt file\n";
 
     my %soMatch;
     foreach my $name (<$so_fh>) {
@@ -503,22 +526,22 @@ sub soTypeCheck {
         $soMatch{$so} = $loinc;
     }
      
-    foreach my $i (@{$gvf}){
+    foreach my $i (@{$data}){
         chomp $i;
         my $type = lc($i->{'type'});
         
         if ($soMatch{$type}){
             $i->{'attribute'}->{'clin'}->{'Clin_variant_type'} = $soMatch{$type};
-            $i->{'type'} = $soMatch{$type};
+            # changes type $i->{'type'} = $soMatch{$type};
         }
     }
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
 
 sub sigfCheck {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
     
     my $xcl = $self->get_dbixclass;
     
@@ -542,23 +565,23 @@ sub sigfCheck {
     }
     
     # search for matches in gvf file.
-    foreach my $i ( @{$gvf} ){
-        my $gvfStart  = $i->{'start'};
-        my $gvfGene = $i->{'attribute'}->{'clin'}->{'Clin_gene'};
+    foreach my $i ( @{$data} ){
+        my $dataStart  = $i->{'start'};
+        my $dataGene = $i->{'attribute'}->{'clin'}->{'Clin_gene'};
         
-        if ( $clin{$gvfStart} ){
+        if ( $clin{$dataStart} ){
             # make results easy to match with.
             my $matchRef = $i->{'attribute'}->{'Reference_seq'};
             my $matchVar = $i->{'attribute'}->{'Variant_seq'};
-            my $clinRef  = $clin{$gvfStart}->{'ref'};
-            my $clinVar  = $clin{$gvfStart}->{'var'};
+            my $clinRef  = $clin{$dataStart}->{'ref'};
+            my $clinVar  = $clin{$dataStart}->{'var'};
             
             # give me what I want!
             next unless ( $matchRef eq $clinRef && $matchVar eq $clinVar );
             
             # what to add.
-            my $clinSig  = $clin{$gvfStart}->{'sig'};
-            my $clinCui  = $clin{$gvfStart}->{'cui'};
+            my $clinSig  = $clin{$dataStart}->{'sig'};
+            my $clinCui  = $clin{$dataStart}->{'cui'};
             
             # will take clinCui and split it into parts
             my $sep = $self->_conceptSplit($clinCui, $conceptList);
@@ -594,23 +617,24 @@ sub sigfCheck {
                 $sigUpd =~ s/^(.*)\,$/$1/;
                 $sigValue = $sigUpd;
             }
-            # add discovered items to gvfclin file.
-            $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $clin{$gvfStart}->{'rsid'};
+            # add discovered items to gvfclin file.  But don't rewrite.
+            $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $clin{$dataStart}->{'rsid'}
+                unless exists $i->{'attribute'}->{'clin'}->{'Clin_variant_id'};
 
             ## updating ref_seq to match clinVar
             $i->{'attribute'}->{'Variant_seq'} = $clinVar;
             $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = "$sigValue:$$sep";
         }
     }        
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
 
 sub allelicCheck {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
     
-    foreach my $i ( @{$gvf} ){
+    foreach my $i ( @{$data} ){
         chomp $i;
         
         my $zyg = $i->{'attribute'}->{'Zygosity'};
@@ -633,9 +657,8 @@ sub allelicCheck {
         else {
             $i->{'attribute'}->{'clin'}->{'Clin_allelic_state'} = 'homozygous';
         }
-    
     }
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
@@ -643,12 +666,12 @@ sub allelicCheck {
 # This works well, but will need to be filled out
 
 sub hgvsDNACheck {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
 
     # list of accepted types. Must be SO sequence_alteration child.
     my @soType = qw(substitution deletion duplication insertion indel);
 
-    foreach my $i ( @{$gvf} ){
+    foreach my $i ( @{$data} ){
         chomp $i;
         
         # check for alias and add it to clin file, then delete alias line.
@@ -714,17 +737,17 @@ sub hgvsDNACheck {
         }
         else { next }
     }
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
 
 sub hgvsProtCheck {
-    my ($self, $gvf) = @_;
+    my ($self, $data) = @_;
     
     my $table = Bio::Tools::CodonTable->new();
     
-    foreach my $i ( @{$gvf} ){
+    foreach my $i ( @{$data} ){
         
         my $genoRef = $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'};
         #delete $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'};
@@ -796,7 +819,7 @@ sub hgvsProtCheck {
         $line =~ s/\,$// if $line; 
         $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'} = $line;
     }
-    return $gvf;
+    return $data;
 }
 
 #------------------------------------------------------------------------------
@@ -840,4 +863,122 @@ sub _pragmas {
 
 no Moose;
 1;
+
+=head1 NAME:
+
+Clin::Constructor
+
+=head1 DESCRIPTION
+
+...
+
+=head1 FUNCTIONS
+
+=head2 gvfParser
+
+    Title   : gvfParser
+    Usage   : $obj->gvfParser;
+    Function: Creates a data structure for each feature line of the GVF files.
+    Returns : Arrayref of hashrefs of each of the feature lines.
+
+
+=head2 gvfRelationBuild
+
+    Title   : gvfRelationBuild
+    Usage   : $obj->gvfRelationBuild(GVF arrayref);
+    Function: Wrapper method.
+              Currently Runs:
+                gvfValadate
+                gvfGeneFind
+                gvfRefBuild
+                snpCheck
+                soTypeCheck
+                sigfCheck
+                allelicCheck
+    Returns : Arrayref of updated GVF file.
+
+
+=head2 gvfValadate
+
+    Title   : gvfValadate
+    Usage   : $obj->gvfValadate(GVF arrayref);
+    Function: Compares reference sequence entered to current genome build for accuracy.
+              Script will automatically fail if reference match is below 90%.
+              This can be changed if --validate is changed or --ref_update is used.
+    Returns : Void.
+
+
+=head2 gvfGeneFind
+
+    Title   : gvfGeneFind
+    Usage   : $obj->gvfGeneFind(GVF arrayref);
+    Function: Takes parsed GVF file and searches for protein parent based on chromosome,
+              start and end position.  Method uses a indexed version of GRCh37.p5_top_level.gff3.
+    Returns : Arrayref of updated GVF file.
+
+
+=head2 gvfRefBuild
+
+    Title   : gvfRefBuild
+    Usage   : $obj->gvfRefBuild(GVF arrayref);
+    Function: Data Currently added:
+                Clin_gene
+                Clin_genomic_reference,
+                Clin_HGVS_protein 
+    Returns : Arrayref of updated GVF file.
+
+=head2 snpCheck
+
+    Title   : snpCheck
+    Usage   : $obj->snpCheck(GVF arrayref);
+    Function: Check indexed dbsnp file and adds rsid to Clin_variant_id to GVF file.
+    Returns : Arrayref of updated GVF file.
+
+
+=head2 soTypeCheck
+
+    Title   : soTypeCheck
+    Usage   : $obj->soTypeCheck(GVF arrayref);
+    Function: Check list of SO sequence_alteration terms via feature type
+              if match occurs will update Clin_variant_type term.
+    Returns : Arrayref of updated GVF file.
+
+
+=head2 sigfCheck
+
+    Title   : sigfCheck
+    Usage   : $obj->sigfCheck(GVF arrayref);
+    Function: Will check GeneDatabase.db for known clinical significance
+              and add to Clin_disease_variant_interpret tag.  Will also
+              update any Clin_variant_id if present.
+    Returns : Arrayref of updated GVF file.
+
+
+=head2 allelicCheck
+
+    Title   : allelicCheck
+    Usage   : $obj->allelicCheck(GVF arrayref);
+    Function: Will check for zygosity, if present will add to Clin_allelic_state
+              or will infer based on Variant_seq.
+    Returns : Arrayref of updated GVF file.
+
+
+=head1 INTERNAL FUNCTIONS
+
+
+=head2 _pragmas
+
+    Title   : _pragmas
+    Usage   : $obj->_pragmas;
+    Function: Internal method to parse pragma information and store it
+              in the object.
+    Returns : Void (Stored in object).
+
+=head2 _termUpdate
+
+    Title   : _termUpdate
+    Usage   : $obj->_termUpdate(GVF arrayref);
+    Function: Uses command line information to switch current tag in attribute
+              to Clin term.
+    Returns : Arrayref of updated GVF file.
 

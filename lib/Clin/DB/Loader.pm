@@ -39,7 +39,7 @@ has 'dbixclass' => (
     reader  => 'get_dbixclass',
     default => sub {
         my $self = shift;
-        my $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
+        my $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
         $self->set_dbixclass($dbix);
     },
 );
@@ -53,13 +53,13 @@ sub _build_database {
     my $self = shift;
     my $dbix;
     
-    if ( -f 'GeneDatabase.db' ){
+    if ( -f 'GeneDatabase.sqlite' ){
         ##die "\nGeneDatabase already exists\n";
-        $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
+        $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
     }
     else {
-        system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
-        $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
+        system("sqlite3 GeneDatabase.sqlite < ../data/mysql/DatabaseSchema.sql");
+        $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
     }
     $self->set_dbixclass($dbix);
 

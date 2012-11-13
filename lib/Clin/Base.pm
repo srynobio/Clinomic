@@ -2,7 +2,6 @@ package Clin::Base;
 use Moose;
 use Moose::Util::TypeConstraints;
 use namespace::autoclean;
-use Carp;
 
 with 'Clin::Roles';
 with 'MooseX::Getopt';

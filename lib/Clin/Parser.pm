@@ -37,37 +37,37 @@ sub hgnc {
 }
 
 #------------------------------------------------------------------------------
-
-sub genetic_association {
-    my $self = shift;
-    
-    # uses the relationship file to collect genetic association information 
-    my $genetic_assos_file = $self->get_directory . "/" . 'Genetic_Association' . "/" . "all.txt";
-    my $genetic_assos_fh   = IO::File->new($genetic_assos_file, 'r') || die "Can not open Genetic_Association/all.txt file\n";
-
-    my @gene_asso;
-    foreach my $line ( <$genetic_assos_fh> ){
-        chomp $line;
-        next if $line !~ /^\d+/;
-        
-        my @list = split /\t/, $line;
-        
-        # bit of clean up.
-        next if ! $list[5];
-        next if ! $list[8];
-        next if $list[13] !~ /^(\d+)$/;
-
-        my $gene_asso = {
-            symbol    => $list[8],
-            disease   => $list[5],
-            class     => $list[3],
-            pubmed    => $list[13],
-        };
-        push @gene_asso, $gene_asso;
-    }
-    $genetic_assos_fh->close;
-    $self->_populate_genetic_assoc(\@gene_asso);
-}
+#
+#sub genetic_association {
+#    my $self = shift;
+#    
+#    # uses the relationship file to collect genetic association information 
+#    my $genetic_assos_file = $self->get_directory . "/" . 'Genetic_Association' . "/" . "all.txt";
+#    my $genetic_assos_fh   = IO::File->new($genetic_assos_file, 'r') || die "Can not open Genetic_Association/all.txt file\n";
+#
+#    my @gene_asso;
+#    foreach my $line ( <$genetic_assos_fh> ){
+#        chomp $line;
+#        next if $line !~ /^\d+/;
+#        
+#        my @list = split /\t/, $line;
+#        
+#        # bit of clean up.
+#        next if ! $list[5];
+#        next if ! $list[8];
+#        next if $list[13] !~ /^(\d+)$/;
+#
+#        my $gene_asso = {
+#            symbol    => $list[8],
+#            disease   => $list[5],
+#            class     => $list[3],
+#            pubmed    => $list[13],
+#        };
+#        push @gene_asso, $gene_asso;
+#    }
+#    $genetic_assos_fh->close;
+#    $self->_populate_genetic_assoc(\@gene_asso);
+#}
 
 #------------------------------------------------------------------------------
 
@@ -182,7 +182,8 @@ sub refseq {
 sub clinInterpret {
     my $self = shift;
         
-    # uses the file to collect clinvar information 
+    # uses the file to collect clinvar information
+    # rename to clin sig file
     my $clinInt_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_20120616.vcf";
     my $clinInt_fh   = IO::File->new($clinInt_file, 'r') || die "Can not open ClinVar/clinvar_20120616.vcf file\n";
     

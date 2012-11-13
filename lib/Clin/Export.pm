@@ -274,8 +274,6 @@ sub _structPragmaXML {
 
 #-----------------------------------------------------------------------------
 
-use Data::Dumper;
-
 sub _featureXML {
     my ($self, $gvf, $fh) = @_;
 

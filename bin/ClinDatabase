@@ -27,10 +27,12 @@ my $result = GetOptions(
 if ( $help ){ die $usage }
 
 # check that user has sqlite3
+print "{ClinData} Checking for sqlite3.\n"
 my $sqlite_check = `sqlite3 -version`;
 if ( ! $sqlite_check ) { die "sqlite3 is required\n"; }
 
 # Building db object.
+print "{ClinData} Building sqlite3 database.\n"
 my $db;
 if ( $db_lib) {
     $db = Clin::Base->new(

@@ -1,0 +1,154 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use IO::File;
+
+our $VERSION = (0.0.1);
+
+
+## Directory check ##
+unless ( -d '../testDir' ) { die "\n../testDir needed to run this script.\n" }
+system("mkdir ../testDir/GFF");
+system("mkdir ../testDir/dbSNP");
+system("mkdir ../testDir/ClinVar");
+system("mkdir ../testDir/NCBI");
+
+## GFF ##
+print "{ClinIndex} Downloading and unpacking GFF file.\n";
+system("wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz");
+system("mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz");
+print "{ClinIndex} Unzipping GFF file\n";
+system("gunzip ref_GRCh37.gff3.gz");
+
+print "{ClinIndex} creating GFF index file of only gene models.\n";
+updateGFF();
+`bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz`;
+`tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz`;
+`rm ref_GRCh37.gff3 Updated.ref_GRCh37.gff3`;
+`mv Updated.ref_GRCh37.gff3.gz* ../testDir/GFF`;
+
+## DBSNP ##
+print "{ClinIndex} Downloading and unpacking dbSNP file.\n";
+system("wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz ");
+print "{ClinIndex} Unzipping dbSNP file\n";
+system("gunzip 00-All.vcf.gz");
+print "{ClinIndex} Updating dbSNP file.\n";
+updateSNP();
+print "{ClinIndex} Indexing dbSNP file.\n";
+`bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz`;
+`tabix -s1 -b2 -e2 Updated.00-All.vcf.gz`;
+`rm 00-All.vcf Updated.00-All.vcf`;
+`mv Updated.00-All.vcf.gz* ../testDir/dbSNP`;
+
+## CLINVAR ##
+print "{ClinIndex} Downloading ClinVar files.\n";
+system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz");
+system("mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz");
+system("gunzip clinvar_sigfile.vcf.gz");
+# clinvar gene id file
+system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id");
+`mv clinvar_sigfile.vcf gene_condition_source_id ../testDir/ClinVar/`;
+
+## NCBI ##
+print "{ClinIndex} Downloading and unzipping NCBI files.\n";
+system("wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz");
+system("wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz");
+system("gunzip gene_info.gz");
+system("gunzip gene2refseq.gz");
+
+# before moving make needed file changes.
+print "{ClinIndex} Converting NCBI files to work with Clinomic.\n";
+`grep -P '^9606' gene_info |awk -F '\t' '{print $2 "\t" $3 }' > 00id+symbol`;
+`grep -P '^9606' gene2refseq >01humanid`;
+
+# sub to make needed switch to file
+symbolSwitch();
+`mv UpdatedRefSeq.txt gene_info gene2refseq ../testDir/NCBI`;
+`rm 00id+symbol 01humanid`;
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------
+#----------------------------- SUBS -------------------------------------------
+#------------------------------------------------------------------------------
+
+sub symbolSwitch {
+
+    my $symFH = IO::File->new('00id+symbol', 'r') || die "Can't open 00id+symbo1 file\n";
+    my $idFH  = IO::File->new('01humanid', 'r') || die "Can't open 01humanid file\n";
+    my $outFH = IO::File->new('UpdatedRefSeq.txt', 'w') || die "Can't make write file??\n";
+    
+    my %sym;
+    foreach my $i (<$symFH>){
+            chomp $i;
+    
+            my($id, $sym) = split/\t/, $i;
+            $sym{$id} = $sym;
+    }
+    
+    foreach my $t (<$idFH>) {
+            chomp $t;
+    
+            my @items = split/\t/, $t;
+    
+            if ($sym{$items[1]}){
+                    $items[1] = $sym{$items[1]};
+            }
+    
+            my $refseq = join('     ', @items);
+            print $outFH $refseq, "\n";
+    }
+    $symFH->close;
+    $idFH->close;
+    $outFH->close;
+}
+
+#------------------------------------------------------------------------------
+
+sub updateGFF {
+    
+    my $inFH  = IO::File->new('ref_GRCh37.gff3', 'r') || die "please enter ref file\n";
+    my $outFH = IO::File->new('Updated.ref_GRCh37.gff3', 'w') || die "Can't create Update.ref.model file\n";
+    
+    foreach (<$inFH>){
+            chomp $_;
+            
+            if ( $_ !~ /^NC_/) { next }
+            if ( $_ =~ /region/ ) { next }
+
+            #taking out mito atm
+            if ($_ =~ /^NC_012920.1/) { next }
+            
+            $_ =~ s/^NC_(0){5,5}(\d)\.(\d+)\t(.*)$/chr$2\t$4/g;
+            $_ =~ s/^NC_(0){4,4}(\d+)\.(\d+)\t(.*)$/chr$2\t$4/g;
+            
+            my @genes = grep { $_ =~ /\tgene\t/ }$_;
+            foreach (@genes) {
+                    print $outFH $_, "\n";
+            }
+    }
+    $outFH->close;
+}
+
+#------------------------------------------------------------------------------
+
+sub updateSNP {
+    
+    my $inFH  = IO::File->new('00-All.vcf', 'r') || die "Please enter dbSNP file\n";
+    my $outFH = IO::File->new('Updated.00-All.vcf', 'w') || die "Can't create Update.00-All.vcf file\n";
+    
+    foreach (<$inFH>){
+        chomp $_;
+        
+        if ( $_ =~ /^#{1,}/ ) { next }
+        $_ =~ s/^/chr/;
+        
+        print $outFH $_, "\n";
+    }
+}
+
+#------------------------------------------------------------------------------

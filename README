@@ -1,4 +1,4 @@
-GVF-Clin
+Clinomic
 
 *************************************************
 *** THIS TOOL IS STILL IN ACTIVE DEVELOPMENT ****
@@ -28,24 +28,19 @@ To install this module, run the following commands:
 
 SUPPORT AND DOCUMENTATION
 
-After installing, you can find documentation for this module with the
-perldoc command.
-
-    perldoc GVF::Clin
-
 You can also look for information at:
 
     RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=GVF-Clin
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Clinomic
 
     AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/GVF-Clin
+        http://annocpan.org/dist/Clinomic
 
     CPAN Ratings
-        http://cpanratings.perl.org/d/GVF-Clin
+        http://cpanratings.perl.org/d/Clinomic
 
     Search CPAN
-        http://search.cpan.org/dist/GVF-Clin/
+        http://search.cpan.org/dist/Clinomic/
 
 
 LICENSE AND COPYRIGHT
