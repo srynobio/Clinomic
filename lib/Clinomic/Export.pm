@@ -1,4 +1,4 @@
-package Clin::Export;
+package Clinomic::Export;
 use Moose::Role;
 use IO::File;
 use File::Basename;
@@ -55,6 +55,9 @@ sub exporter {
 }
 
 #-----------------------------------------------------------------------------
+
+### maybe add ##reference-fasta, ##feature-gff3, ##file-date 
+
 
 sub _toGVF {
     my ($self, $gvf) = @_;

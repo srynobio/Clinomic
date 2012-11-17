@@ -1,8 +1,8 @@
-package Clin::DB::Loader;
+package Clinomic::DB::Loader;
 use Moose::Role;
 use Carp;
 use namespace::autoclean;
-use Clin::DB::Connect;
+use Clinomic::DB::Connect;
 
 use Data::Dumper;
 
@@ -39,7 +39,7 @@ has 'dbixclass' => (
     reader  => 'get_dbixclass',
     default => sub {
         my $self = shift;
-        my $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
+        my $dbix = Clinomic::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
         $self->set_dbixclass($dbix);
     },
 );
@@ -54,22 +54,22 @@ sub _build_database {
     my $dbix;
     
     if ( -f 'GeneDatabase.sqlite' ){
-        ##die "\nGeneDatabase already exists\n";
-        $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
+        die "\nGeneDatabase already exists\n";
+        ###$dbix = Clinomic::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
     }
     else {
         system("sqlite3 GeneDatabase.sqlite < ../data/mysql/DatabaseSchema.sql");
-        $dbix = Clin::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
+        $dbix = Clinomic::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
     }
     $self->set_dbixclass($dbix);
 
     # build all the db sections.
-    warn "Building Database\n";
+    warn "{ClinDatabase} Building Database\n";
     $self->hgnc;
     $self->refseq;
-    $self->genetic_association; 
+    ###$self->genetic_association; 
     $self->clinvar;
-    $self->drug_bank;
+    ###$self->drug_bank;
     $self->clinInterpret;
 }
 
@@ -112,6 +112,8 @@ sub _populate_refseq {
             genomic_refseq    => $i->[0]->{'genomic_acc'},
             protein_refseq    => $i->[0]->{'prot_acc'},
             transcript_refseq => $i->[0]->{'transcript_id'},
+            genomic_start     => $i->[0]->{'start'},
+            genomic_end       => $i->[0]->{'end'},
             hgnc_gene_id      => $i->[1],
         });
     }
@@ -155,7 +157,7 @@ sub _populate_clinvar {
     }
     
     my $match = $self->match_builder($clin, \@symbols, 'simple');
-
+    
     foreach my $i (@{$match}) {
         $xcl->resultset('Clinvar')->create({
             umls_concept_id => $i->[0]->{'umls'},

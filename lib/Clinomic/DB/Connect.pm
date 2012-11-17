@@ -1,4 +1,4 @@
-package Clin::DB::Connect;
+package Clinomic::DB::Connect;
 use strict;
 use warnings;
 use base qw/DBIx::Class::Schema/;

@@ -1,4 +1,4 @@
-package Clin::DB::Connect::Result::Variant_effect;
+package Clinomic::DB::Connect::Result::Variant_effect;
 use strict;
 use warnings;
 
@@ -36,7 +36,7 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
   "GVFClin_id",
-  "Clin::DB::Connect::Result::GVFClin",
+  "Clinomic::DB::Connect::Result::GVFClin",
   { id => "GVFClin_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );

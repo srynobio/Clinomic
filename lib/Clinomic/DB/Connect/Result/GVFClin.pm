@@ -1,4 +1,4 @@
-package Clin::DB::Connect::Result::GVFClin;
+package Clinomic::DB::Connect::Result::GVFClin;
 use strict;
 use warnings;
 
@@ -103,7 +103,7 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->has_many(
   "variant_effect",
-  "Clin::DB::Connect::Result::Variant_effect",
+  "Clinomic::DB::Connect::Result::Variant_effect",
   { "foreign.GVFClin_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );

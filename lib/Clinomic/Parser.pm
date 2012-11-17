@@ -1,4 +1,4 @@
-package Clin::Parser;
+package Clinomic::Parser;
 use Moose::Role;
 use Carp;
 use namespace::autoclean;
@@ -71,10 +71,13 @@ sub hgnc {
 
 #------------------------------------------------------------------------------
 
+############
+use Data::Dumper;
+
 sub clinvar {
     my ($self, $request) = @_;
         
-    # uses the file to collect clinvar information 
+    # uses the file to collect clinvar information
     my $clinvar_file = $self->get_directory . "/" . 'ClinVar' . "/" . "gene_condition_source_id";
     my $clinvar_fh   = IO::File->new($clinvar_file, 'r') || die "Can not open ClinVar/gene_condition_source_id file\n";
     
@@ -83,14 +86,14 @@ sub clinvar {
         chomp $line;
     
         my ( $gene_id, $symbol, $concept, $name, $source, $source_id, $mim ) = split /\t/, $line;
-    
+
         # select only SNOMEDCT terms and terms from UMLS. 
         next if ! $symbol;    
-        if ( $source ne 'SNOMEDCT') { next }
+        if ( $source =~ /SNOMEDCT/) { next }
         if ( $concept =~ /^CN(\d+)/) { next }
     
         my $var_file = {
-            symbol      => $symbol,
+            symbol    => $symbol,
             umls      => $concept,
             disease   => $name,
             source    => $source,
@@ -106,43 +109,43 @@ sub clinvar {
 
 #------------------------------------------------------------------------------
 
-sub drug_bank {
-    my $self = shift;
-        
-    # uses the relationship file to collect drug information
-    # better then contacting your dealer.
-    my $drug_file = $self->get_directory . "/" . 'Drug_Bank' . "/" . "drugbank.txt";
-    my $drug_fh   = IO::File->new($drug_file, 'r') || die "Can not open Drug_Bank/drugbank.txt file\n";
-    
-    local $/ = '#';
-    my ( $drug, $target, $hgnc, @dbank );
-    
-    foreach my $line ( <$drug_fh> ){
-        chomp $line;
-    
-        $line =~ s/\n//g;
-        $line =~ s/^\s//g;
-        
-        if ( $line =~ /^Generic_Name:(.*)/ ) {
-            $drug = $1;
-        }
-        elsif ( $line =~ /^Drug_Target_1_Gene_Name:(.*)/ ) {
-            $target = $1;
-        }
-        elsif ( $line =~ /^Drug_Target_1_HGNC_ID:(.*)/ ) {
-            $hgnc = $1;
-    
-            my $drug = {
-                drug   => $drug,
-                symbol => $target,
-            };
-            push @dbank, $drug;
-        }
-        else { next }
-    }
-    $drug_fh->close;
-    $self->_populate_drug_info(\@dbank);
-}
+#sub drug_bank {
+#    my $self = shift;
+#        
+#    # uses the relationship file to collect drug information
+#    # better then contacting your dealer.
+#    my $drug_file = $self->get_directory . "/" . 'Drug_Bank' . "/" . "drugbank.txt";
+#    my $drug_fh   = IO::File->new($drug_file, 'r') || die "Can not open Drug_Bank/drugbank.txt file\n";
+#    
+#    local $/ = '#';
+#    my ( $drug, $target, $hgnc, @dbank );
+#    
+#    foreach my $line ( <$drug_fh> ){
+#        chomp $line;
+#    
+#        $line =~ s/\n//g;
+#        $line =~ s/^\s//g;
+#        
+#        if ( $line =~ /^Generic_Name:(.*)/ ) {
+#            $drug = $1;
+#        }
+#        elsif ( $line =~ /^Drug_Target_1_Gene_Name:(.*)/ ) {
+#            $target = $1;
+#        }
+#        elsif ( $line =~ /^Drug_Target_1_HGNC_ID:(.*)/ ) {
+#            $hgnc = $1;
+#    
+#            my $drug = {
+#                drug   => $drug,
+#                symbol => $target,
+#            };
+#            push @dbank, $drug;
+#        }
+#        else { next }
+#    }
+#    $drug_fh->close;
+#    $self->_populate_drug_info(\@dbank);
+#}
 
 #------------------------------------------------------------------------------
 
@@ -150,8 +153,8 @@ sub refseq {
     my $self = shift;
     
     # uses the relationship file to collect refseq information 
-    my $ref_file = $self->get_directory . "/" . 'NCBI_Gene' . "/" . "UpdatedRefSeq.txt";
-    my $ref_fh   = IO::File->new($ref_file, 'r') || die "Can not open NCBI_Gene/UpdatedRefSeq.txt file\n";
+    my $ref_file = $self->get_directory . "/" . 'NCBI' . "/" . "UpdatedRefSeq.txt";
+    my $ref_fh   = IO::File->new($ref_file, 'r') || die "Can not open NCBI/UpdatedRefSeq.txt file\n";
     
     my @refseq;
     foreach my $line ( <$ref_fh> ){
@@ -161,8 +164,9 @@ sub refseq {
         
         my @refs = split /\t/, $line;
         
-        #unless ( $refs[7] =~ /^NC_(.*)$/ || $refs[7] =~ /^AC_(.*)$/) { next }
+        # exclude unwanted data
         unless ( $refs[7] =~ /^NC_(.*)$/ ) { next }
+        unless ( $refs[12] =~ /Reference GRCh37.p10/ ) { next }
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/) { next }
         
         my $refhash = {
@@ -170,6 +174,8 @@ sub refseq {
             transcript_id => $refs[3],
             prot_acc      => $refs[5],
             genomic_acc   => $refs[7],
+            start         => $refs[9],
+            end           => $refs[10],
         };
         push @refseq, $refhash;
     }
@@ -184,8 +190,8 @@ sub clinInterpret {
         
     # uses the file to collect clinvar information
     # rename to clin sig file
-    my $clinInt_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_20120616.vcf";
-    my $clinInt_fh   = IO::File->new($clinInt_file, 'r') || die "Can not open ClinVar/clinvar_20120616.vcf file\n";
+    my $clinInt_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_sigfile.vcf";
+    my $clinInt_fh   = IO::File->new($clinInt_file, 'r') || die "Can not open ClinVar/clinvar_sigfile.vcf file\n";
     
     my @clinSig;
     foreach my $line ( <$clinInt_fh> ){
@@ -193,10 +199,10 @@ sub clinInterpret {
     
         # meta data means nothing to me!
         if ($line =~ /^#{1,}/){ next }
-        if ($line !~ /^chr/){ next }
         
         my ($chrom, $pos, $id, $ref, $var, undef, undef, $info) = split /\t/, $line;
-        
+        $chrom =~ s/^/chr/g;
+
         # grep only what were looking for    
         my @infoList = split(/\;/, $info);
         my @clinList = grep { $_ =~ /CLNCUI/ || /CLNHGVS/ || /CLNSIG/ || /GENEINFO/ }@infoList;
@@ -224,7 +230,12 @@ sub clinInterpret {
             clin_data => \%atts,
         };
         push @clinSig, $t;
+        
+        
+        print Dumper( @clinList, @clinSig);
     }
+    
+    
     $clinInt_fh->close;
     $self->_populate_clinInterpret(\@clinSig);
 }

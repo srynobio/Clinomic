@@ -1,4 +1,4 @@
-package Clin::DB::Connect::Result::Hgnc_gene;
+package Clinomic::DB::Connect::Result::Hgnc_gene;
 use strict;
 use warnings;
 
@@ -21,28 +21,28 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->has_many(
   "drug_bank",
-  "Clin::DB::Connect::Result::Drug_bank",
+  "Clinomic::DB::Connect::Result::Drug_bank",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
   "clinvar",
-  "Clin::DB::Connect::Result::Clinvar",
+  "Clinomic::DB::Connect::Result::Clinvar",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
   "genetic_association",
-  "Clin::DB::Connect::Result::Genetic_association",
+  "Clinomic::DB::Connect::Result::Genetic_association",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
   "refseq",
-  "Clin::DB::Connect::Result::Refseq",
+  "Clinomic::DB::Connect::Result::Refseq",
   { "foreign.hgnc_gene_id" => "self.id" },
   { cascade_copy => 0, cascade_delete => 0, },
 );

@@ -1,4 +1,4 @@
-package Clin::Constructor;
+package Clinomic::Builder; 
 use Moose;
 use Tabix;
 use IO::File;
@@ -7,7 +7,7 @@ use Bio::DB::Fasta;
 use Bio::Tools::CodonTable;  
 use File::Basename;
 
-extends 'Clin::Base';
+extends 'Clinomic::Base';
 with 'MooseX::Getopt';
 
 use Data::Dumper;
@@ -30,22 +30,23 @@ has 'file' => (
 );
 
 has 'fasta_file' => (
+    traits    =>['NoGetopt'],
     is       => 'rw',
     isa      => 'Str',
     reader   => 'get_fasta',
-    ##required => 1,
-    documentation => q(REQUIRED.  Path to reference fasta file. Will generate a indexed file.),
+    default  => '../data/Fasta/hg19.fa',
+    #required => 1,
+    #documentation => q(Default is hg19.fa.  Option allows user to add different reference.),
 );
 
 has 'gff_file' => (
+    traits    =>['NoGetopt'],
     is       => 'rw',
     isa      => 'Str',
     reader   => 'get_gff',
-    ####    Updated.ref_model.gff3
-    ##required => 1,
-    ##default => '../data/genomes/GRCh37.p5_top_level.gff3.bgz',
-    #documentation => q(Tabix created file to search for genes based on GVF files coordinates.),
-    documentation => q(REQUIRED.  Path to GFF feature file.  Will generate a indexed file.),
+    #required => 1,
+    default  => '../data/GFF/Updated.ref_GRCh37.gff3.gz',
+    #documentation => q(Default is ref_GRCh37.  Option allows user to add different reference.),
 );
 
 has 'validate' => (
@@ -53,24 +54,19 @@ has 'validate' => (
     isa     => 'Int',
     reader  => 'get_percent',
     default => '90',
-    documentation => q(Validate percentage compared to reference genome(hg19.fa).  Seqid much be in form chr#.  Default is 90%. ),
+    documentation => q(Validate percentage compared to reference genome(hg19.fa).  Default is 90%.
+    ),
 );
 
 has 'tabix_dbsnp' => (
+    traits    =>['NoGetopt'],
     is      => 'rw',
     isa     => 'Str',
     reader  => 'get_db_tabix',
-    default => '../data/dbSNP/dbsnp.bgz',
-    documentation => q(Tabix created file to search for RSIDs based on GVF files coordinates.),
+    #required => 1,
+    default => '../data/dbSNP/Updated.00-All.vcf.gz',
+    #documentation => q(Default is 00-All.vcf.  Option allows user to add different reference.),
 );
-
-#has 'tabix_clinvar' => (
-#    is      => 'rw',
-#    isa     => 'Str',
-#    reader  => 'get_clin_tabix',
-#    default => '../data/ClinVar/clinvar_20120616.vcf.bgz',
-#    documentation => q(Tabix created file to search for Clin_disease_variant_interpret based on GVF files coordinates, and RSID),
-#);
 
 has 'pragma' => ( 
     traits    =>['NoGetopt'],
@@ -90,7 +86,7 @@ has 'tag_switch' => (
         termExist => 'exists',
         access    => 'accessor',
     },
-    documentation => q(Allows change in feature attribute tag from term to GVFClin term.  Example: disease=Clin_disease_interpret.
+    documentation => q(Allows change in feature attribute tag.  Example: disease=Clin_disease_interpret.
     ),
 );
 
@@ -194,19 +190,19 @@ sub gvfParser {
 sub gvfRelationBuild {
     my ($self, $data ) = @_;
     
-    warn "Valadating GVF file.\n";
+    warn "{Clinomic} Valadating GVF file.\n";
     $self->gvfValadate($data);
-    warn "Building gene relationships.\n";
+    warn "{Clinomic} Building gene relationships.\n";
     my $stp0 = $self->gvfGeneFind($data);
-    warn "Checking refseq files.\n";
+    warn "{Clinomic} Checking refseq files.\n";
     my $stp1 = $self->gvfRefBuild($stp0);
-    warn "Checking dbSNP file.\n";
+    warn "{Clinomic} Checking dbSNP file.\n";
     my $stp2 = $self->snpCheck($stp1);
-    warn "Checking SO file.\n";
+    warn "{Clinomic} Checking SO file.\n";
     my $stp3 = $self->soTypeCheck($stp2);
-    warn "Checking ClinVar file.\n";
+    warn "{Clinomic} Checking ClinVar file.\n";
     my $stp4 = $self->sigfCheck($stp3); # where Clin_HGVS_DNA is added ########
-    warn "Checking allelic state.\n";
+    warn "{Clinomic} Checking allelic state.\n";
     my $stp5 = $self->allelicCheck($stp4);
 
 =cut
@@ -241,13 +237,16 @@ sub gvfValadate {
         else {
             $chr = $i->{'seqid'};
         }
-        
+
         my $start   = $i->{'start'};
         my $end     = $i->{'end'};
         
         my $dataRef = uc($i->{'attribute'}->{'Reference_seq'});
-        
         if ( $dataRef eq '-'){ $noRef++; next; }
+
+        # check that the strand matches.
+        my $strand  = $i->{'strand'};
+        if ( $strand eq '-' ) { tr/ACGT/TGCA/ }
         
         # call to Bio::DB. 
         my $bioSeq = $db->seq("$chr:$start..$end");
@@ -297,8 +296,8 @@ sub gvfGeneFind {
     }
     
     # create gene_id and symbol list from gene_info file.
-    my $ncbi_gene = $self->get_directory . "/" . 'NCBI_Gene' . "/" . "gene_info";
-    my $ncbi_fh   = IO::File->new($ncbi_gene, 'r') || die "Can not open NCBI_Gene/gene_info file\n";
+    my $ncbi_gene = $self->get_directory . "/" . 'NCBI' . "/" . "gene_info";
+    my $ncbi_fh   = IO::File->new($ncbi_gene, 'r') || die "Can not open NCBI/gene_info file\n";
     
     # build hash of ncbi gene_id with only genes matching hgnc list
     my %ncbi;
@@ -866,7 +865,7 @@ no Moose;
 
 =head1 NAME:
 
-Clin::Constructor
+Clinomic::Builder
 
 =head1 DESCRIPTION
 

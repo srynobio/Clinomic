@@ -1,4 +1,4 @@
-package Clin::DB::Connect::Result::Clinvar_clin_sig;
+package Clinomic::DB::Connect::Result::Clinvar_clin_sig;
 use strict;
 use warnings;
 
@@ -39,7 +39,7 @@ __PACKAGE__->set_primary_key("id");
 
 __PACKAGE__->belongs_to(
   "hgnc_gene",
-  "Clin::DB::Connect::Result::Hgnc_gene",
+  "Clinomic::DB::Connect::Result::Hgnc_gene",
   { id => "hgnc_gene_id" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );

@@ -1,4 +1,4 @@
-package Clin::Utils;
+package Clinomic::Utils;
 use Moose::Role;
 use namespace::autoclean;
 use Carp;

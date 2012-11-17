@@ -1,9 +1,9 @@
-package Clin::Base;
+package Clinomic::Base;
 use Moose;
 use Moose::Util::TypeConstraints;
 use namespace::autoclean;
 
-with 'Clin::Roles';
+with 'Clinomic::Roles';
 with 'MooseX::Getopt';
 
 #-----------------------------------------------------------------------------
