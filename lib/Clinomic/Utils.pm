@@ -210,14 +210,19 @@ sub _conceptList {
     my $self = shift;    
     my $clinData = $self->clinvar('return');
     
+    #######print Dumper($clinData);
+    
     my %concept;
     foreach my $i ( @{$clinData} ){
+        if ( $i->{'source_id'} ) { next }
+        
         $concept{$i->{'umls'}} = {
             snomed_id => $i->{'source_id'},
             disease   => $i->{'disease'},
             gene      => $i->{'symbol'},
         };
     }
+    ######print Dumper(%concept);
     return \%concept;
 }
 
@@ -227,6 +232,7 @@ sub _conceptSplit {
     my ($self, $clin, $concept) = @_;
     my %concept = %$concept;
 
+    print Dumper($clin, $concept);
     my $cuiLine;
     if ($clin =~ /\|/) {
         my @concept = split /\|/, $clin;

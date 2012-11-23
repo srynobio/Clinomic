@@ -2,7 +2,7 @@
 -- Author:        Shawn Rynearson
 -- Caption:       New Model
 -- Project:       Name of the project
--- Changed:       2012-10-12 15:41
+-- Changed:       2012-11-15 13:44
 -- Created:       2012-07-30 13:55
 PRAGMA foreign_keys = OFF;
 
@@ -50,6 +50,8 @@ CREATE TABLE "refseq"(
   "genomic_refseq" VARCHAR(25),
   "protein_refseq" VARCHAR(25),
   "transcript_refseq" VARCHAR(25),
+  "genomic_start" INTEGER,
+  "genomic_end" INTEGER,
   "hgnc_gene_id" INTEGER NOT NULL,
   CONSTRAINT "fk_refseq_hgnc_gene1"
     FOREIGN KEY("hgnc_gene_id")

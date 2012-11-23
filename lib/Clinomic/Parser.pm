@@ -205,19 +205,50 @@ sub clinInterpret {
 
         # grep only what were looking for    
         my @infoList = split(/\;/, $info);
-        my @clinList = grep { $_ =~ /CLNCUI/ || /CLNHGVS/ || /CLNSIG/ || /GENEINFO/ }@infoList;
+        
+        ##################
+        print Dumper(@infoList);
+        
+        foreach (@infoList){
+            if ( $_ =~ /CLNSIG/ or /CLNDSDB/ or /CLNDSDBID/ ){
+               # print $_, "\n";
+            }
+        }
+
+
+
+
+
+
+
+        ##################
+        my @clinList = grep { $_ =~ /CLNDSDBID/ || /CLNHGVS/ || /CLNSIG/ || /GENEINFO/ }@infoList;
         
         # split up the clin data        
         my %atts;
         foreach my $i (@clinList) {
+            
              $i =~ /^(.*)=(.*)/g;
              my $tag   = $1;
              my $value = $2;
+             
+             #####print "$tag\n"; #$value\n";
              
              if ($tag eq 'GENEINFO'){
                 my ($gene, undef) = split/:/, $value;
                 $value = $gene;
              }
+             ####################################
+             #elsif ($tag eq 'CLNDSDBID'){
+                #print "$tag\t$value\t"; 
+             #}
+             ####################################
+             elsif ($tag eq 'CLNDSDB'){
+                #print "$tag\t$value\n"; 
+             }
+                         
+             
+             
              $atts{$tag} = $value;
         }
         # hashref of parts.
@@ -230,11 +261,7 @@ sub clinInterpret {
             clin_data => \%atts,
         };
         push @clinSig, $t;
-        
-        
-        print Dumper( @clinList, @clinSig);
     }
-    
     
     $clinInt_fh->close;
     $self->_populate_clinInterpret(\@clinSig);

@@ -35,8 +35,6 @@ has 'fasta_file' => (
     isa      => 'Str',
     reader   => 'get_fasta',
     default  => '../data/Fasta/hg19.fa',
-    #required => 1,
-    #documentation => q(Default is hg19.fa.  Option allows user to add different reference.),
 );
 
 has 'gff_file' => (
@@ -44,9 +42,7 @@ has 'gff_file' => (
     is       => 'rw',
     isa      => 'Str',
     reader   => 'get_gff',
-    #required => 1,
     default  => '../data/GFF/Updated.ref_GRCh37.gff3.gz',
-    #documentation => q(Default is ref_GRCh37.  Option allows user to add different reference.),
 );
 
 has 'validate' => (
@@ -63,9 +59,7 @@ has 'tabix_dbsnp' => (
     is      => 'rw',
     isa     => 'Str',
     reader  => 'get_db_tabix',
-    #required => 1,
     default => '../data/dbSNP/Updated.00-All.vcf.gz',
-    #documentation => q(Default is 00-All.vcf.  Option allows user to add different reference.),
 );
 
 has 'pragma' => ( 
@@ -110,34 +104,6 @@ has 'ref_update' =>(
 has '+dbixclass' => (
     traits  => ['NoGetopt'],
 );
-
-
-#
-## rewrite dbixclass att to use with builder scripts.
-#has '+dbixclass' => (
-#    traits  => ['NoGetopt'],
-#    default => sub {
-#        my $self = shift;
-#        my $dbix;
-#        my $file = basename($self->get_file);
-#        $file =~ s/()\.gvf/$1.db/;
-#    
-#        if ( -f "$file" ){
-#            $dbix = GVF::DB::Connect->connect({
-#                    dsn =>"dbi:SQLite:$file",
-#                    on_connect_do => "ATTACH DATABASE 'GeneDatabase.db' as GeneDatabase"
-#            });
-#        }
-#        else {
-#            system("sqlite3 $file < ../data/mysql/GVFClinSchema.sql");
-#            $dbix = GVF::DB::Connect->connect({
-#                    dsn =>"dbi:SQLite:$file",
-#                    on_connect_do => "ATTACH DATABASE 'GeneDatabase.db' as GeneDatabase"
-#            });
-#        }
-#        $self->set_dbixclass($dbix);
-#    },
-#);
 
 #-----------------------------------------------------------------------------
 #------------------------------- Methods -------------------------------------
@@ -201,7 +167,7 @@ sub gvfRelationBuild {
     warn "{Clinomic} Checking SO file.\n";
     my $stp3 = $self->soTypeCheck($stp2);
     warn "{Clinomic} Checking ClinVar file.\n";
-    my $stp4 = $self->sigfCheck($stp3); # where Clin_HGVS_DNA is added ########
+    my $stp4 = $self->clinicalSig($stp3); # where Clin_HGVS_DNA is added ########
     warn "{Clinomic} Checking allelic state.\n";
     my $stp5 = $self->allelicCheck($stp4);
 
@@ -296,7 +262,7 @@ sub gvfGeneFind {
     }
     
     # create gene_id and symbol list from gene_info file.
-    my $ncbi_gene = $self->get_directory . "/" . 'NCBI' . "/" . "gene_info";
+    my $ncbi_gene = $self->get_directory . "/" . 'NCBI' . "/" . "gene_info9606";
     my $ncbi_fh   = IO::File->new($ncbi_gene, 'r') || die "Can not open NCBI/gene_info file\n";
     
     # build hash of ncbi gene_id with only genes matching hgnc list
@@ -515,7 +481,7 @@ sub snpCheck {
 sub soTypeCheck {
     my ($self, $data) = @_;
     
-    my $so_fh = IO::File->new('../data/SO/soTermSwitch.txt', 'r')
+    my $so_fh = IO::File->new('../data/SO/SO_LOINC.txt', 'r')
         || die "Can't open soTermSwitch.txt file\n";
 
     my %soMatch;
@@ -531,7 +497,6 @@ sub soTypeCheck {
         
         if ($soMatch{$type}){
             $i->{'attribute'}->{'clin'}->{'Clin_variant_type'} = $soMatch{$type};
-            # changes type $i->{'type'} = $soMatch{$type};
         }
     }
     return $data;
@@ -539,52 +504,77 @@ sub soTypeCheck {
 
 #------------------------------------------------------------------------------
 
-sub sigfCheck {
+sub clinicalSig {
     my ($self, $data) = @_;
     
-    my $xcl = $self->get_dbixclass;
-    
     # hashref of concept => { disease, gene }
-    my $conceptList = $self->_conceptList;
-
-    # capture data from GeneDatabase sqlite3 file.
-    my $clindb = $xcl->resultset('Clinvar_clin_sig');
+    ####my $conceptList = $self->_conceptList;
     
-    my %clin;
-    while ( my $rt = $clindb->next ){
-    
-        $clin{$rt->location} = {
-            ref     => $rt->ref_seq,
-            var     => $rt->var_seq,
-            rsid    => $rt->rsid,
-            sig     => $rt->clnsig,
-            cui     => $rt->clncui,
-            hgvsDNA => $rt->clnhgvs,
-        };
-    }
+    # create tabix object
+    # This needs to be added to both Index script and attribute section of the object.
+    my $tab = Tabix->new(-data => '/home/srynearson/Clinomic/data/ClinVar/clinTest.bgz') || die "Please input dbSNP Tabix file\n";    
     
     # search for matches in gvf file.
     foreach my $i ( @{$data} ){
-        my $dataStart  = $i->{'start'};
-        my $dataGene = $i->{'attribute'}->{'clin'}->{'Clin_gene'};
         
-        if ( $clin{$dataStart} ){
-            # make results easy to match with.
-            my $matchRef = $i->{'attribute'}->{'Reference_seq'};
-            my $matchVar = $i->{'attribute'}->{'Variant_seq'};
-            my $clinRef  = $clin{$dataStart}->{'ref'};
-            my $clinVar  = $clin{$dataStart}->{'var'};
+        my $gvfChr   = $i->{'seqid'};
+        my $gvfStart = $i->{'start'};
+        my $gvfEnd   = $i->{'end'};
+        my $gvfRef   = $i->{'attribute'}->{'Reference_seq'};
+        my $gvfVar   = $i->{'attribute'}->{'Variant_seq'};
+        
+        # check the tabix file for matching regions
+        my $iter = $tab->query($gvfChr, $gvfStart - 1, $gvfEnd + 1);
+        
+        #my %clinMatch;
+        while (my $read = $tab->read($iter)) {
+
+            my @tabReturn = split(/\;/, $read);
+       
+            # capture then check chr ref var.
+            my @fst8 = split/\t/, $tabReturn[0];
+            unless ( $gvfRef eq $fst8[3] && $gvfVar eq $fst8[4] ) { next }
             
-            # give me what I want!
-            next unless ( $matchRef eq $clinRef && $matchVar eq $clinVar );
+            my %clinMatch;
+            foreach ( @tabReturn ){
+                unless ( $_ =~ /^CLN/ ) { next }
+               
+                $_ =~ /^(.*)=(.*)/g;
+                
+		# add hgvs DNA info
+                if ( $1 eq 'CLNHGVS'){
+                    $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $2;
+                }
+                else { $clinMatch{$1} = $2; }
+            }
             
-            # what to add.
-            my $clinSig  = $clin{$dataStart}->{'sig'};
-            my $clinCui  = $clin{$dataStart}->{'cui'};
-            
-            # will take clinCui and split it into parts
-            my $sep = $self->_conceptSplit($clinCui, $conceptList);
-            
+=cut
+# ORDER #
+CLNALLE
+CLNSRC
+CLNORIGIN
+CLNSRCID
+CLNSIG
+CLNDSDB
+CLNDSDBID
+CLNDBN
+CLNACC
+=cut
+        
+    	#### print $clinMatch{'CLNDSDBID'}, "\n";
+        #    # what to add.
+        #    my $clinSig  = $clin{$dataStart}->{'sig'};
+        #    my $clinCui  = $clin{$dataStart}->{'cui'};
+        #    
+        #    # will take clinCui and split it into parts
+        #    my $sep; # = $self->_conceptSplit($clinCui, $conceptList);
+        #    
+        #    ##########print Dumper($clinCui);
+        #    ##########print $clinSig, "\n";
+
+
+=cut
+# keep this section for now
             # change numbers into values.            
             my $pMatch = {
                 0 => 'unknown',
@@ -619,13 +609,15 @@ sub sigfCheck {
             # add discovered items to gvfclin file.  But don't rewrite.
             $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $clin{$dataStart}->{'rsid'}
                 unless exists $i->{'attribute'}->{'clin'}->{'Clin_variant_id'};
-
+    
+            
             ## updating ref_seq to match clinVar
             $i->{'attribute'}->{'Variant_seq'} = $clinVar;
             $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = "$sigValue:$$sep";
+=cut        
         }
     }        
-    return $data;
+    #return $data;
 }
 
 #------------------------------------------------------------------------------

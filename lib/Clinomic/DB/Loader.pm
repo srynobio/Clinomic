@@ -10,27 +10,6 @@ use Data::Dumper;
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
 
-#has 'dbixclass' => (
-#    is      => 'rw',
-#    isa	    => 'Object',
-#    reader  => 'dbixclass',
-#    writer  => 'set_dbixclass',
-#    reader  => 'get_dbixclass',
-#    default => sub {
-#        my $self = shift;
-#        my $dbix;
-#        
-#        if ( -f 'GeneDatabase.db' ){
-#            die "\nGeneDatabase already exists\n";
-#        }
-#        else {
-#            system("sqlite3 GeneDatabase.db < ../data/mysql/DatabaseSchema.sql");
-#            $dbix = GVF::DB::Connect->connect('dbi:SQLite:GeneDatabase.db');
-#        }
-#        $self->set_dbixclass($dbix);
-#    },
-#);
-
 has 'dbixclass' => (
     is      => 'rw',
     isa	    => 'Object',
@@ -44,7 +23,6 @@ has 'dbixclass' => (
     },
 );
 
-
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
@@ -55,7 +33,6 @@ sub _build_database {
     
     if ( -f 'GeneDatabase.sqlite' ){
         die "\nGeneDatabase already exists\n";
-        ###$dbix = Clinomic::DB::Connect->connect('dbi:SQLite:GeneDatabase.sqlite');
     }
     else {
         system("sqlite3 GeneDatabase.sqlite < ../data/mysql/DatabaseSchema.sql");
@@ -70,7 +47,7 @@ sub _build_database {
     ###$self->genetic_association; 
     $self->clinvar;
     ###$self->drug_bank;
-    $self->clinInterpret;
+    #$self->clinInterpret;
 }
 
 #------------------------------------------------------------------------------

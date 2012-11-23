@@ -5,72 +5,179 @@ use IO::File;
 
 our $VERSION = (0.0.1);
 
+# Run times: bgzip is the bottleneck.
+# standard
+# time: 13m30.796s
+#parallel
+# time: 11m33.998s
 
 ## Directory check ##
-unless ( -d '../data' ) { die "\n../data needed to run this script.\n" }
-system("mkdir ../data/GFF");
-system("mkdir ../data/dbSNP");
-system("mkdir ../data/ClinVar");
-system("mkdir ../data/NCBI");
+## And add sub directories.
+unless ( -d '../data' ) { die "\n../data directory needed to run this script.\n" }
+`mkdir ../data/GFF`;
+`mkdir ../data/dbSNP`;
+`mkdir ../data/ClinVar`;
+`mkdir ../data/NCBI`;
 
-## GFF ##
-print "{ClinIndex} Downloading and unpacking GFF file.\n";
-system("wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz");
-system("mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz");
-print "{ClinIndex} Unzipping GFF file\n";
-system("gunzip ref_GRCh37.gff3.gz");
+# check if user had parallel installed 
+my $parallel = `parallel --version`;
+#my $parallel = '0'; #system("parallel --version");
 
-print "{ClinIndex} creating GFF index file of only gene models.\n";
-updateGFF();
-`bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz`;
-`tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz`;
-`rm ref_GRCh37.gff3 Updated.ref_GRCh37.gff3`;
-`mv Updated.ref_GRCh37.gff3.gz* ../data/GFF`;
+if ($parallel) {
+        # I/O
+        my $wgetFH = IO::File->new('wgetList', 'w');
+        my $gunsFH = IO::File->new('gunsList', 'w');
+        my $bgFH   = IO::File->new('bgList', 'w');
+        my $tabFH  = IO::File->new('tabList', 'w');
+                
+        # wget section
+        {
+                # list of all the files needed.
+                # Updated location here if needed.
+                my @wgetItems = (
+                        "wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz",
+                        "wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz",
+                        "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz",
+                        "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id",
+                        "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz",
+                        "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz",
+                );
+                
+                foreach ( @wgetItems ){
+                        print $wgetFH $_, "\n";
+                }
+                
+                # use parallel to download .gz files.
+                warn "{ClinIndex} Downloading needed gz files\n";
+                `cat wgetList | parallel -j+6`;
+                
+                # rename to make future files easy to work with
+                system("mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz");
+                system("mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz");
+        }
+        
+        # Unzipping section
+        {
+                # glob fetch current directory info.
+                foreach my $i ( <*> ){
+                        if ( $i =~ /.gz$/ ) {
+                                print $gunsFH "gunzip $i\n";
+                        }
+                }
+                
+                # use parallel to gunzip files.
+                warn "{ClinIndex} Unzipping files\n";
+                `cat gunsList | parallel -j+6`;
+        }
+        
+        # Run functions to updated needed files.
+        {
+                warn "{ClinIndex} Updating files\n";
+                system("grep -P '^9606' gene2refseq > 01humanid");
+                system("grep -P '^9606' gene_info > gene_info9606");
+        
+                updateGFF();
+                updateSNP();
+                symbolSwitch();
+        }
+        
+        # bgzip and tabix section
+        {
+                my @bgzips = (
+                        "bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz",
+                        "bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz",
+                );
+                
+                foreach ( @bgzips ){
+                        print $bgFH $_, "\n";
+                }
+                
+                # use parallel to download .gz files.
+                warn "{ClinIndex} Running bgzip\n";
+                `cat bgList | parallel -j+6`;
+        }
+        
+        # make tabix files of all bgzip files
+        {
+                my @tabixs = (
+                        "tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz",
+                        "tabix -s1 -b2 -e2 Updated.00-All.vcf.gz",
+                );
+                
+                foreach ( @tabixs ){
+                        print $tabFH $_, "\n";
+                }
+                warn "{ClinIndex} Running tabix\n";
+                `cat tabList | parallel -j+6`;
+        }
+        
+        # Move files and clean up
+        `mv clinvar_sigfile.vcf gene_condition_source_id ../data/ClinVar/`;
+        `mv Updated.00-All.vcf* 00-All.vcf ../data/dbSNP/`;
+        `mv gene_info9606 UpdatedRefSeq.txt gene2refseq ../data/NCBI/`;
+        `mv Updated.ref_GRCh37.gff3* ref_GRCh37.gff3 ../data/GFF/`;
+        `rm bgList gunsList tabList wgetList 01humanid gene_info`;
 
-## DBSNP ##
-print "{ClinIndex} Downloading and unpacking dbSNP file.\n";
-system("wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz ");
-print "{ClinIndex} Unzipping dbSNP file\n";
-system("gunzip 00-All.vcf.gz");
-print "{ClinIndex} Updating dbSNP file.\n";
-updateSNP();
-print "{ClinIndex} Indexing dbSNP file.\n";
-`bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz`;
-`tabix -s1 -b2 -e2 Updated.00-All.vcf.gz`;
-`rm 00-All.vcf Updated.00-All.vcf`;
-`mv Updated.00-All.vcf.gz* ../data/dbSNP`;
+        $wgetFH->close;
+        $gunsFH->close;
+        $bgFH->close;
+        $tabFH->close;
+}
 
-## CLINVAR ##
-print "{ClinIndex} Downloading ClinVar files.\n";
-system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz");
-system("mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz");
-system("gunzip clinvar_sigfile.vcf.gz");
-# clinvar gene id file
-system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id");
-`mv clinvar_sigfile.vcf gene_condition_source_id ../data/ClinVar/`;
-
-## NCBI ##
-print "{ClinIndex} Downloading and unzipping NCBI files.\n";
-system("wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz");
-system("wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz");
-system("gunzip gene_info.gz");
-system("gunzip gene2refseq.gz");
-
-# before moving make needed file changes.
-print "{ClinIndex} Converting NCBI files to work with Clinomic.\n";
-`grep -P '^9606' gene_info |awk -F '\t' '{print $2 "\t" $3 }' > 00id+symbol`;
-`grep -P '^9606' gene2refseq >01humanid`;
-
-# sub to make needed switch to file
-symbolSwitch();
-`mv UpdatedRefSeq.txt gene_info gene2refseq ../data/NCBI`;
-`rm 00id+symbol 01humanid`;
-
-
-
-
-
-
+else {
+        ## GFF ##
+        print "{ClinIndex} Downloading and unpacking GFF file.\n";
+        system("wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz");
+        system("mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz");
+        print "{ClinIndex} Unzipping GFF file\n";
+        system("gunzip ref_GRCh37.gff3.gz");
+        print "{ClinIndex} creating GFF index file of only gene models.\n";
+        updateGFF();
+        `bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz`;
+        `tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz`;
+        `rm ref_GRCh37.gff3 Updated.ref_GRCh37.gff3`;
+        `mv Updated.ref_GRCh37.gff3.gz* ../data/GFF`;
+        
+        ## DBSNP ##
+        print "{ClinIndex} Downloading and unpacking dbSNP file.\n";
+        system("wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz ");
+        print "{ClinIndex} Unzipping dbSNP file\n";
+        system("gunzip 00-All.vcf.gz");
+        print "{ClinIndex} Updating dbSNP file.\n";
+        updateSNP();
+        print "{ClinIndex} Indexing dbSNP file.\n";
+        `bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz`;
+        `tabix -s1 -b2 -e2 Updated.00-All.vcf.gz`;
+        `rm 00-All.vcf Updated.00-All.vcf`;
+        `mv Updated.00-All.vcf.gz* ../data/dbSNP`;
+        
+        ### CLINVAR ##
+        print "{ClinIndex} Downloading ClinVar files.\n";
+        system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz");
+        system("mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz");
+        system("gunzip clinvar_sigfile.vcf.gz");
+        
+        # clinvar gene id file
+        system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id");
+        `mv clinvar_sigfile.vcf gene_condition_source_id ../data/ClinVar/`;
+        
+        ## NCBI ##
+        print "{ClinIndex} Downloading and NCBI files.\n";
+        system("wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz");
+        system("wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz");
+        print "{ClinIndex} Unzipping NCBI files.\n";
+        system("gunzip gene_info.gz");
+        system("gunzip gene2refseq.gz");
+        # before moving make needed file changes.
+        print "{ClinIndex} Converting NCBI files to work with Clinomic.\n";
+        system("grep -P '^9606' gene_info > gene_info9606");
+        system( q/grep -P '^9606' gene_info |awk -F '\t' '{print $2 "\t" $3 }' > 00id+symbol/ );
+        system( q/grep -P '^9606' gene2refseq >01humanid/ );
+        # sub to make needed switch to file
+        symbolSwitch();
+        `mv UpdatedRefSeq.txt gene_info9606 gene2refseq ../data/NCBI`;
+        `rm 00id+symbol 01humanid gene_info`;
+}
 
 #------------------------------------------------------------------------------
 #----------------------------- SUBS -------------------------------------------
@@ -78,18 +185,18 @@ symbolSwitch();
 
 sub symbolSwitch {
 
-    my $symFH = IO::File->new('00id+symbol', 'r') || die "Can't open 00id+symbo1 file\n";
+    my $geneFH = IO::File->new('gene_info9606', 'r') || die "Can't open gene_info file\n";
     my $idFH  = IO::File->new('01humanid', 'r') || die "Can't open 01humanid file\n";
     my $outFH = IO::File->new('UpdatedRefSeq.txt', 'w') || die "Can't make write file??\n";
     
     my %sym;
-    foreach my $i (<$symFH>){
+    foreach my $i (<$geneFH>){
             chomp $i;
-    
-            my($id, $sym) = split/\t/, $i;
-            $sym{$id} = $sym;
+            
+            my @columns = split/\t/, $i;
+            $sym{ $columns[1] } = $columns[2];
     }
-    
+
     foreach my $t (<$idFH>) {
             chomp $t;
     
@@ -99,10 +206,10 @@ sub symbolSwitch {
                     $items[1] = $sym{$items[1]};
             }
     
-            my $refseq = join('     ', @items);
+            my $refseq = join("\t", @items);
             print $outFH $refseq, "\n";
     }
-    $symFH->close;
+    $geneFH->close;
     $idFH->close;
     $outFH->close;
 }

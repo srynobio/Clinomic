@@ -31,22 +31,22 @@ sub exporter {
     my $type = $self->get_export;
     
     if ($type eq 'gvfclin'){
-        warn "Building GVFClin file.\n";
+        warn "{Clinomic}Building GVFClin file.\n";
         $self->_toGVF($gvf);
     }
     elsif ($type eq 'xml'){
-        warn "Building XML.\n";
+        warn "{Clinomic}Building XML.\n";
         $self->_toXML($gvf);
         $self->_completeXML;
     }
     elsif ($type eq 'hl7'){
-        warn "Building HL7-XML file.\n";
+        warn "{Clinomic}Building HL7-XML file.\n";
         $self->_toXML($gvf);
         $self->_completeXML;
         $self->_toGTR($gvf);
     }
     elsif( $type eq 'all'){
-        warn "Building all output files.\n";
+        warn "{Clinomic}Building all output files.\n";
         $self->_toGVF($gvf);
         $self->_toXML($gvf);
         $self->_completeXML;

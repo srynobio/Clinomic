@@ -2,10 +2,12 @@
 use strict;
 use warnings;
 use lib '/home/srynearson/Clinomic/lib';
-use Clin::Base;
+use Clinomic::Base;
 use Getopt::Long;
 
 our $VERSION  = '0.0.1';
+
+# time: 6m11.943s
 
 my $usage = "\n
 DatabaseBuilder $VERSION
@@ -27,21 +29,20 @@ my $result = GetOptions(
 if ( $help ){ die $usage }
 
 # check that user has sqlite3
-print "{ClinData} Checking for sqlite3.\n"
+warn "{ClinDatabase} Checking for sqlite.\n";
 my $sqlite_check = `sqlite3 -version`;
 if ( ! $sqlite_check ) { die "sqlite3 is required\n"; }
 
 # Building db object.
-print "{ClinData} Building sqlite3 database.\n"
 my $db;
 if ( $db_lib) {
-    $db = Clin::Base->new(
+    $db = Clinomic::Base->new(
         data_directory => $db_lib,
         build_database => 1,
     );
 }
 else{
-    $db = Clin::Base->new(
+    $db = Clinomic::Base->new(
         build_database => 1,
     );        
 }
