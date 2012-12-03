@@ -167,7 +167,7 @@ sub gvfRelationBuild {
     warn "{Clinomic} Checking SO file.\n";
     my $stp3 = $self->soTypeCheck($stp2);
     warn "{Clinomic} Checking ClinVar file.\n";
-    my $stp4 = $self->clinicalSig($stp3); # where Clin_HGVS_DNA is added ########
+    my $stp4 = $self->clinicalSig($stp3);
     warn "{Clinomic} Checking allelic state.\n";
     my $stp5 = $self->allelicCheck($stp4);
 
@@ -507,117 +507,84 @@ sub soTypeCheck {
 sub clinicalSig {
     my ($self, $data) = @_;
     
-    # hashref of concept => { disease, gene }
-    ####my $conceptList = $self->_conceptList;
-    
     # create tabix object
     # This needs to be added to both Index script and attribute section of the object.
     my $tab = Tabix->new(-data => '/home/srynearson/Clinomic/data/ClinVar/clinTest.bgz') || die "Please input dbSNP Tabix file\n";    
     
     # search for matches in gvf file.
     foreach my $i ( @{$data} ){
+        chomp $i;
         
-        my $gvfChr   = $i->{'seqid'};
+        my $gvfChr;
+        if ( $i->{'seqid'} =~ /^chr/i ){
+            $gvfChr = $i->{'seqid'};
+            $gvfChr =~ s/^chr(\S+)/$1/g;
+        }
+        else { $gvfChr = $i->{'seqid'}; }
+        
+        # Basic data needed from GVF file.
         my $gvfStart = $i->{'start'};
         my $gvfEnd   = $i->{'end'};
         my $gvfRef   = $i->{'attribute'}->{'Reference_seq'};
         my $gvfVar   = $i->{'attribute'}->{'Variant_seq'};
+        my $gvfRSID  = $i->{'attribute'}->{'clin'}->{'Clin_variant_id'};
         
         # check the tabix file for matching regions
         my $iter = $tab->query($gvfChr, $gvfStart - 1, $gvfEnd + 1);
         
-        #my %clinMatch;
+        my %clinMatch;
         while (my $read = $tab->read($iter)) {
 
+            # split the vcf line into parts.
             my @tabReturn = split(/\;/, $read);
        
-            # capture then check chr ref var.
+            # capture then check chr, ref, var for correct match
             my @fst8 = split/\t/, $tabReturn[0];
-            unless ( $gvfRef eq $fst8[3] && $gvfVar eq $fst8[4] ) { next }
             
-            my %clinMatch;
+            # this section will check for matches that have multiple variant
+            # known, and see if user file matches any.
+            my $clinVar;
+            if ( $fst8[4] =~ /\,/ ){
+                my @clinVars = split /,/, $fst8[4];
+                map {
+                    if ($gvfVar eq $_){
+                        $clinVar = $gvfVar;
+                    }
+                }@clinVars;
+            }
+            else { $clinVar = $fst8[4]; }
+
+            # just let matches go through
+            unless ( $gvfRef eq $fst8[3] && $gvfVar eq $clinVar ) { next }
+            
             foreach ( @tabReturn ){
                 unless ( $_ =~ /^CLN/ ) { next }
                
                 $_ =~ /^(.*)=(.*)/g;
-                
-		# add hgvs DNA info
-                if ( $1 eq 'CLNHGVS'){
-                    $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $2;
+                my $tag   = $1;
+                my $value = $2;
+               
+                if ( $tag =~ /CLNSIG/ or /CLNDSDB/ or /CLNDSDBID/) {
+                    push @{ $clinMatch{$fst8[2]} }, $value;
                 }
-                else { $clinMatch{$1} = $2; }
+                # also add RSID and HGVS info to feature line if not present
+                if ( $tag eq 'CLNHGVS'){
+                    $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $value;
+                }
+                unless ( $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} ) {
+                    $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $fst8[2];
+                }
             }
-            
-=cut
-# ORDER #
-CLNALLE
-CLNSRC
-CLNORIGIN
-CLNSRCID
-CLNSIG
-CLNDSDB
-CLNDSDBID
-CLNDBN
-CLNACC
-=cut
+            # add gvfVar and clin variant list to ref.
+            push @{ $clinMatch{$fst8[2]} }, $fst8[4], $gvfVar;
+        }
+        my $clinOrder = $self->_signifOrder(\%clinMatch);
         
-    	#### print $clinMatch{'CLNDSDBID'}, "\n";
-        #    # what to add.
-        #    my $clinSig  = $clin{$dataStart}->{'sig'};
-        #    my $clinCui  = $clin{$dataStart}->{'cui'};
-        #    
-        #    # will take clinCui and split it into parts
-        #    my $sep; # = $self->_conceptSplit($clinCui, $conceptList);
-        #    
-        #    ##########print Dumper($clinCui);
-        #    ##########print $clinSig, "\n";
-
-
-=cut
-# keep this section for now
-            # change numbers into values.            
-            my $pMatch = {
-                0 => 'unknown',
-                1 => 'unknown',
-                2 => 'benign',
-                3 => 'presumed_benign',
-                4 => 'presumed_pathogenic',
-                5 => 'pathogenic',
-                6 => 'unknown',
-                7 => 'unknown',
-                255 => 'unknown',
-            };
-            # split up and change the sig values.  
-            my $sigValue;
-            if ( $clinSig =~ /^(\d+)$/ ) {
-                if ($pMatch->{$1}){
-                    $sigValue = "$pMatch->{$1}";
-                }
-            }
-            elsif ($clinSig =~ /(\d+\|(.*)$)/ ) {
-                my @numList = split/\|/, $1;
-                
-                my $sigUpd;
-                foreach (@numList){
-                    if ($pMatch->{$_}){
-                        $sigUpd .= "$pMatch->{$_},";
-                    }
-                }
-                $sigUpd =~ s/^(.*)\,$/$1/;
-                $sigValue = $sigUpd;
-            }
-            # add discovered items to gvfclin file.  But don't rewrite.
-            $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $clin{$dataStart}->{'rsid'}
-                unless exists $i->{'attribute'}->{'clin'}->{'Clin_variant_id'};
-    
-            
-            ## updating ref_seq to match clinVar
-            $i->{'attribute'}->{'Variant_seq'} = $clinVar;
-            $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = "$sigValue:$$sep";
-=cut        
+        foreach my $return (@{$clinOrder}){
+            $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = $return if $return;
         }
     }        
-    #return $data;
+    return $data;
 }
 
 #------------------------------------------------------------------------------

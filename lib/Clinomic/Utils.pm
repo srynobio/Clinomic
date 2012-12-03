@@ -206,52 +206,48 @@ sub _variant_builder {
 
 #------------------------------------------------------------------------------
 
-sub _conceptList {
-    my $self = shift;    
-    my $clinData = $self->clinvar('return');
+sub _signifOrder {
+    my ($self, $clinData) = @_;
     
-    #######print Dumper($clinData);
+    my @clinMatches;
+    while ( my ($rsid, $aryRef) = each %{$clinData} ) {
     
-    my %concept;
-    foreach my $i ( @{$clinData} ){
-        if ( $i->{'source_id'} ) { next }
-        
-        $concept{$i->{'umls'}} = {
-            snomed_id => $i->{'source_id'},
-            disease   => $i->{'disease'},
-            gene      => $i->{'symbol'},
+        # making lookup tables.
+        my $lookup = { OMIM => 1, 'SNOMED CT' => 1, '.' => 1 };
+        my $sigLookup = {
+            0   => 'unknown',
+            1   => 'unknown',
+            2   => 'benign',
+            3   => 'presumed_benign',
+            4   => 'presumed_pathogenic',
+            5   => 'pathogenic',
+            6   => 'unknown',
+            7   => 'unknown',
+            255 => 'unknown',
         };
-    }
-    ######print Dumper(%concept);
-    return \%concept;
-}
-
-#------------------------------------------------------------------------------
-
-sub _conceptSplit {
-    my ($self, $clin, $concept) = @_;
-    my %concept = %$concept;
-
-    print Dumper($clin, $concept);
-    my $cuiLine;
-    if ($clin =~ /\|/) {
-        my @concept = split /\|/, $clin;
-        map {
-            if ( $concept{$_} ){
-                $cuiLine .= "$concept{$_}->{'snomed_id'},";
+        
+        # quick change the numbers into loinc value
+        @{$aryRef}[0] =~ s/(\d+)/$sigLookup->{$1}/g;
+        
+        my @LoincName = split /\,/, @{$aryRef}[0];
+        my @clinVars  = split /\,/, @{$aryRef}[3];
+        my @db        = split /\,/, @{$aryRef}[1];
+        my @ids       = split /\,/, @{$aryRef}[2];
+        my $gvfVar    = @{$aryRef}[4];
+        
+        # if Vars match make a new array with the data.
+        ####my @clinMatches;
+        while ( @clinVars ){
+            my $clinVar = shift @clinVars;
+            my $name = shift @LoincName;
+            my $db      = shift @db;
+            my $id      = shift @ids;
+            if ( $gvfVar eq $clinVar){
+                push @clinMatches, join(',', $name, $db, $id);
             }
-            else { $cuiLine .= '.,'}
-        }@concept;
+        }
     }
-    elsif ( $concept{$clin} ){
-        $cuiLine .= "$concept{$_}->{'snomed_id'}";
-    }
-    else {
-        $cuiLine .= ".";
-    }
-    # clean up end of the line and return ref.
-    $cuiLine =~ s/\,$// if $cuiLine;
-    return \$cuiLine; 
+    return \@clinMatches;
 }
 
 #------------------------------------------------------------------------------
@@ -274,6 +270,7 @@ sub _aliasDNACheck {
         }
     }
 }
+
 #------------------------------------------------------------------------------
 
 sub aaSLC3Letter {

@@ -184,88 +184,85 @@ sub refseq {
 }
 
 #------------------------------------------------------------------------------
-
-sub clinInterpret {
-    my $self = shift;
-        
-    # uses the file to collect clinvar information
-    # rename to clin sig file
-    my $clinInt_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_sigfile.vcf";
-    my $clinInt_fh   = IO::File->new($clinInt_file, 'r') || die "Can not open ClinVar/clinvar_sigfile.vcf file\n";
-    
-    my @clinSig;
-    foreach my $line ( <$clinInt_fh> ){
-        chomp $line;
-    
-        # meta data means nothing to me!
-        if ($line =~ /^#{1,}/){ next }
-        
-        my ($chrom, $pos, $id, $ref, $var, undef, undef, $info) = split /\t/, $line;
-        $chrom =~ s/^/chr/g;
-
-        # grep only what were looking for    
-        my @infoList = split(/\;/, $info);
-        
-        ##################
-        print Dumper(@infoList);
-        
-        foreach (@infoList){
-            if ( $_ =~ /CLNSIG/ or /CLNDSDB/ or /CLNDSDBID/ ){
-               # print $_, "\n";
-            }
-        }
-
-
-
-
-
-
-
-        ##################
-        my @clinList = grep { $_ =~ /CLNDSDBID/ || /CLNHGVS/ || /CLNSIG/ || /GENEINFO/ }@infoList;
-        
-        # split up the clin data        
-        my %atts;
-        foreach my $i (@clinList) {
-            
-             $i =~ /^(.*)=(.*)/g;
-             my $tag   = $1;
-             my $value = $2;
-             
-             #####print "$tag\n"; #$value\n";
-             
-             if ($tag eq 'GENEINFO'){
-                my ($gene, undef) = split/:/, $value;
-                $value = $gene;
-             }
-             ####################################
-             #elsif ($tag eq 'CLNDSDBID'){
-                #print "$tag\t$value\t"; 
-             #}
-             ####################################
-             elsif ($tag eq 'CLNDSDB'){
-                #print "$tag\t$value\n"; 
-             }
-                         
-             
-             
-             $atts{$tag} = $value;
-        }
-        # hashref of parts.
-        my $t = {
-            chr       => $chrom,
-            pos       => $pos,
-            rsid      => $id,
-            ref_seq   => $ref,
-            var_seq   => $var,
-            clin_data => \%atts,
-        };
-        push @clinSig, $t;
-    }
-    
-    $clinInt_fh->close;
-    $self->_populate_clinInterpret(\@clinSig);
-}
+#
+#sub clinInterpret {
+#    my $self = shift;
+#        
+#    # uses the file to collect clinvar information
+#    # rename to clin sig file
+#    my $clinInt_file = $self->get_directory . "/" . 'ClinVar' . "/" . "clinvar_sigfile.vcf";
+#    my $clinInt_fh   = IO::File->new($clinInt_file, 'r') || die "Can not open ClinVar/clinvar_sigfile.vcf file\n";
+#    
+#    my @clinSig;
+#    foreach my $line ( <$clinInt_fh> ){
+#        chomp $line;
+#    
+#        # meta data means nothing to me!
+#        if ($line =~ /^#{1,}/){ next }
+#        
+#        my ($chrom, $pos, $id, $ref, $var, undef, undef, $info) = split /\t/, $line;
+#        $chrom =~ s/^/chr/g;
+#
+#        # grep only what were looking for    
+#        my @infoList = split(/\;/, $info);
+#        
+#        foreach (@infoList){
+#            if ( $_ =~ /CLNSIG/ or /CLNDSDB/ or /CLNDSDBID/ ){
+#               # print $_, "\n";
+#            }
+#        }
+#
+#
+#
+#
+#
+#
+#
+#        ##################
+#        my @clinList = grep { $_ =~ /CLNDSDBID/ || /CLNHGVS/ || /CLNSIG/ || /GENEINFO/ }@infoList;
+#        
+#        # split up the clin data        
+#        my %atts;
+#        foreach my $i (@clinList) {
+#            
+#             $i =~ /^(.*)=(.*)/g;
+#             my $tag   = $1;
+#             my $value = $2;
+#             
+#             #####print "$tag\n"; #$value\n";
+#             
+#             if ($tag eq 'GENEINFO'){
+#                my ($gene, undef) = split/:/, $value;
+#                $value = $gene;
+#             }
+#             ####################################
+#             #elsif ($tag eq 'CLNDSDBID'){
+#                #print "$tag\t$value\t"; 
+#             #}
+#             ####################################
+#             elsif ($tag eq 'CLNDSDB'){
+#                #print "$tag\t$value\n"; 
+#             }
+#                         
+#             
+#             
+#             $atts{$tag} = $value;
+#        }
+#        # hashref of parts.
+#        my $t = {
+#            chr       => $chrom,
+#            pos       => $pos,
+#            rsid      => $id,
+#            ref_seq   => $ref,
+#            var_seq   => $var,
+#            clin_data => \%atts,
+#        };
+#        push @clinSig, $t;
+#    }
+#    
+#    $clinInt_fh->close;
+#    $self->_populate_clinInterpret(\@clinSig);
+#}
 
 #------------------------------------------------------------------------------
 

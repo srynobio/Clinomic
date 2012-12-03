@@ -14,13 +14,10 @@ our ($VERSION) = '0.01';
 my $builder = Clinomic::Builder->new_with_options();
 my $feature = $builder->gvfParser;
 
-$builder->clinicalSig($feature);
 
 # use wrapper method to run all steps.
-#my $clin = $builder->gvfRelationBuild($feature);
+my $clin = $builder->gvfRelationBuild($feature);
 
-
-__END__
 # section which allow you to term_switch.
 if ($builder->need_switch){
     $feature = $builder->_termUpdate($feature);    
