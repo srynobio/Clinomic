@@ -310,132 +310,132 @@
                           <value>
                               <features>
                                   <seqid>
-                                      <xsl:value-of select="/GVFClin/feature/seqid"/>
+                                      <xsl:value-of select="seqid"/>
                                   </seqid>
                                   <source>
-                                      <xsl:value-of select="/GVFClin/feature/source"/>
+                                      <xsl:value-of select="source"/>
                                   </source>
                                   <type>
-                                      <xsl:value-of select="/GVFClin/feature/type"/>
+                                      <xsl:value-of select="type"/>
                                   </type>
                                   <start>
-                                      <xsl:value-of select="/GVFClin/feature/start"/>
+                                      <xsl:value-of select="start"/>
                                   </start>
                                   <end>
-                                      <xsl:value-of select="/GVFClin/feature/end"/>
+                                      <xsl:value-of select="end"/>
                                   </end>
                                   <score>
-                                      <xsl:value-of select="/GVFClin/feature/score"/>
+                                      <xsl:value-of select="score"/>
                                   </score>
                                   <strand>
-                                      <xsl:value-of select="/GVFClin/feature/strand"/>
+                                      <xsl:value-of select="strand"/>
                                   </strand>
                                   <id>
-                                      <xsl:value-of select="/GVFClin/feature/id"/>
+                                      <xsl:value-of select="id"/>
                                   </id>
                                   <alias>
-                                      <xsl:value-of select="/GVFClin/feature/alias"/>
+                                      <xsl:value-of select="alias"/>
                                   </alias>
                                   <dbxref>
-                                      <xsl:value-of select="/GVFClin/feature/dbxref"/>
+                                      <xsl:value-of select="dbxref"/>
                                   </dbxref>
                                   <reference_aa>
-                                      <xsl:value-of select="/GVFClin/feature/reference_aa"/>
+                                      <xsl:value-of select="reference_aa"/>
                                   </reference_aa>
                                   <variant_aa>
-                                      <xsl:value-of select="/GVFClin/feature/variant_aa"/>
+                                      <xsl:value-of select="variant_aa"/>
                                   </variant_aa>
                                   <variant_reads>
-                                      <xsl:value-of select="/GVFClin/feature/variant_reads"/>
+                                      <xsl:value-of select="variant_reads"/>
                                   </variant_reads>
                                   <total_reads>
-                                      <xsl:value-of select="/GVFClin/feature/total_reads"/>
+                                      <xsl:value-of select="total_reads"/>
                                   </total_reads>
                                   <zygosity>
-                                      <xsl:value-of select="/GVFClin/feature/zygosity"/>
+                                      <xsl:value-of select="zygosity"/>
                                   </zygosity>
                                   <variant_freq>
-                                      <xsl:value-of select="/GVFClin/feature/variant_freq"/>
+                                      <xsl:value-of select="variant_freq"/>
                                   </variant_freq>
                                   <variant_effect>
                                       <sequence_variant_1>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/sequence_variant_1"/>
+                                          <xsl:value-of select="sequence_variant_1"/>
                                       </sequence_variant_1>
                                       <index_1>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/index_1"/>
+                                          <xsl:value-of select="index_1"/>
                                       </index_1>
                                       <feature_type_1>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_type_1"/>
+                                          <xsl:value-of select="feature_type_1"/>
                                       </feature_type_1>
                                       <feature_id1_1>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_id1_1"/>
+                                          <xsl:value-of select="feature_id1_1"/>
                                       </feature_id1_1>
                                       <feature_id2_1>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_id2_1"/>
+                                          <xsl:value-of select="feature_id2_1"/>
                                       </feature_id2_1>
                                       <sequence_variant_2>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/sequence_variant_2"/>
+                                          <xsl:value-of select="sequence_variant_2"/>
                                       </sequence_variant_2>
                                       <index_2>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/index_2"/>
+                                          <xsl:value-of select="index_2"/>
                                       </index_2>
                                       <feature_type_2>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_type_2"/>
+                                          <xsl:value-of select="feature_type_2"/>
                                       </feature_type_2>
                                       <feature_id1_2>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_id1_2"/>
+                                          <xsl:value-of select="feature_id1_2"/>
                                       </feature_id1_2>
                                       <feature_id2_2>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_id2_2"/>
+                                          <xsl:value-of select="feature_id2_2"/>
                                       </feature_id2_2>                      
                                       <sequence_variant_3>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/sequence_variant_3"/>
+                                          <xsl:value-of select="sequence_variant_3"/>
                                       </sequence_variant_3>
                                       <index_3>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/index_3"/>
+                                          <xsl:value-of select="index_3"/>
                                       </index_3>
                                       <feature_type_3>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_type_3"/>
+                                          <xsl:value-of select="feature_type_3"/>
                                       </feature_type_3>
                                       <feature_id1_3>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_id1_3"/>
+                                          <xsl:value-of select="feature_id1_3"/>
                                       </feature_id1_3>
                                       <feature_id2_3>
-                                          <xsl:value-of select="/GVFClin/feature/variant_effect/feature_id2_3"/>
+                                          <xsl:value-of select="feature_id2_3"/>
                                       </feature_id2_3>
                                   </variant_effect>
                                   <start_range>
-                                      <xsl:value-of select="/GVFClin/feature/variant_effect/start_range"/>
+                                      <xsl:value-of select="start_range"/>
                                   </start_range>
                                   <end_range>
-                                      <xsl:value-of select="/GVFClin/feature/variant_effect/end_range"/>
+                                      <xsl:value-of select="end_range"/>
                                   </end_range>
                                   <phased>
-                                      <xsl:value-of select="/GVFClin/feature/phased"/>
+                                      <xsl:value-of select="phased"/>
                                   </phased>
                                   <genotype>
-                                      <xsl:value-of select="/GVFClin/feature/genotype"/>
+                                      <xsl:value-of select="genotype"/>
                                   </genotype>
                                   <individual>
-                                      <xsl:value-of select="/GVFClin/feature/individual"/>
+                                      <xsl:value-of select="individual"/>
                                   </individual>
                                   <variant_codon>
-                                      <xsl:value-of select="/GVFClin/feature/variant_codon"/>
+                                      <xsl:value-of select="variant_codon"/>
                                   </variant_codon>
                                   <reference_codon>
-                                      <xsl:value-of select="/GVFClin/feature/reference_codon"/>
+                                      <xsl:value-of select="reference_codon"/>
                                   </reference_codon>
                                   <variant_aa>
-                                      <xsl:value-of select="/GVFClin/feature/variant_aa"/>
+                                      <xsl:value-of select="variant_aa"/>
                                   </variant_aa>
                                   <reference_aa>
-                                      <xsl:value-of select="/GVFClin/feature/reference_aa"/>
+                                      <xsl:value-of select="reference_aa"/>
                                   </reference_aa>
                                   <breakpoint_detail>
-                                      <xsl:value-of select="/GVFClin/feature/breakpoint_detail"/>
+                                      <xsl:value-of select="breakpoint_detail"/>
                                   </breakpoint_detail>
                                   <sequence_context>
-                                      <xsl:value-of select="/GVFClin/feature/sequence_context"/>
+                                      <xsl:value-of select="sequence_context"/>
                                   </sequence_context>
                               </features>
                           </value>
@@ -446,7 +446,7 @@
                               <!-- Reference_seq -->
                               <code code="69547-8" codeSystemName="LOINC" displayName="Reference nucleotide"/>
                               <xsl:variable name="refseq">
-                                  <xsl:value-of select="/GVFClin/feature/reference_seq"/>
+                                  <xsl:value-of select="reference_seq"/>
                               </xsl:variable>
                               <value xsi:type="CD" code="{$refseq}" codeSystemName="GVF"/>
                           </observation>
@@ -456,7 +456,7 @@
                               <!-- p-->
                               <code code="69551-0" codeSystemName="LOINC" displayName="Variable nucleotide"/>
                               <xsl:variable name="varseq">
-                                  <xsl:value-of select="/GVFClin/feature/variant_seq"/>
+                                  <xsl:value-of select="variant_seq"/>
                               </xsl:variable>
                               <value xsi:type="CD" code="{$varseq}" codeSystemName="GVF"/>
                           </observation>
@@ -465,7 +465,7 @@
                           <observation>
                               <!-- Clin_gene -->
                               <xsl:variable name="gene">
-                                  <xsl:value-of select="/GVFClin/feature/clin_gene"/>
+                                  <xsl:value-of select="clin_gene"/>
                               </xsl:variable>
                               <code code="48018-6" codeSystemName="LOINC" displayName="Gene identifier"/>
                               <value xsi:type="CD" code="{$gene}" codeSystemName="HGNC"/>
@@ -475,7 +475,7 @@
                           <observation>
                               <!-- Clin_genomic_reference -->
                               <xsl:variable name="genRef">
-                                  <xsl:value-of select="/GVFClin/feature/clin_genomic_reference"/>
+                                  <xsl:value-of select="clin_genomic_reference"/>
                               </xsl:variable>
                               <code code="48013-7" codeSystemName="LOINC" displayName="Genomic reference sequence identifier"/>
                               <value xsi:type="CD" code="{$genRef}" codeSystemName="refSeq"/>
@@ -485,7 +485,7 @@
                           <observation>
                               <!-- Clin_transcript -->
                               <xsl:variable name="clinTran">
-                                  <xsl:value-of select="/GVFClin/feature/clin_transcript"/>
+                                  <xsl:value-of select="clin_transcript"/>
                               </xsl:variable>
                               <code code="51958-7" codeSystemName="LOINC" displayName="Transcript reference sequence identifier"/>
                               <value xsi:type="CD" code="{$clinTran}" codeSystemName="NCBI"/>
@@ -495,7 +495,7 @@
                           <observation>
                               <!-- Clin_allele_name -->
                               <xsl:variable name="alleName">
-                                  <xsl:value-of select="/GVFClin/feature/clin_allele_name"/>
+                                  <xsl:value-of select="clin_allele_name"/>
                               </xsl:variable>
                               <code code="48008-7" codeSystemName="LOINC" displayName="Allele name"/>
                               <value xsi:type="CD" code="{$alleName}" codeSystemName="Published reports"/>
@@ -505,7 +505,7 @@
                           <observation>
                               <!-- Clin_variant_id -->
                               <xsl:variable name="clinVar">
-                                  <xsl:value-of select="/GVFClin/feature/clin_variant_id"/>
+                                  <xsl:value-of select="clin_variant_id"/>
                               </xsl:variable>
                               <code code="48003-8" codeSystemName="LOINC" displayName="DNA sequence variation identifier"/>
                               <value xsi:type="CD" code="{$clinVar}" codeSystemName="dbSNP"/>
@@ -515,7 +515,7 @@
                           <observation>
                               <!-- Clin_HGVS_DNA -->
                               <xsl:variable name="hgvsDNA">
-                                  <xsl:value-of select="/GVFClin/feature/clin_HGVS_DNA"/>
+                                  <xsl:value-of select="clin_HGVS_DNA"/>
                               </xsl:variable>
                               <code code="48004-6" codeSystemName="LOINC" displayName="DNA sequence variation"/>
                               <value xsi:type="CD" code="{$hgvsDNA}" codeSystemName="HGVS"/>
@@ -525,17 +525,17 @@
                           <observation>
                               <!-- Clin_variant_type -->
                               <xsl:variable name="clinVarType">
-                                  <xsl:value-of select="/GVFClin/feature/clin_variant_type"/>
+                                  <xsl:value-of select="clin_variant_type"/>
                               </xsl:variable>
                               <code code="48019-4" codeSystemName="LOINC" displayName="DNA sequence variation type"/>
-                              <value xsi:type="CD" code="{$clinVarType}" codeSystemName="SO"/>
+                              <value xsi:type="CD" code="{$clinVarType}" codeSystemName="LOINC"/>
                           </observation>
                       </entryRelationship>
                       <entryRelationship typeCode="SUBJ">
                           <observation>
                               <!-- Clin_HGVS_protein -->
                               <xsl:variable name="hgvfPro">
-                                  <xsl:value-of select="/GVFClin/feature/clin_HGVS_protein"/>
+                                  <xsl:value-of select="clin_HGVS_protein"/>
                               </xsl:variable>
                               <code code="48005-3" codeSystemName="LOINC" displayName="Amino acid change"/>
                               <value xsi:type="CD" code="{$hgvfPro}" codeSystemName="HGVS"/>
@@ -545,7 +545,7 @@
                           <observation>
                               <!-- Clin_aa_change_type -->
                               <xsl:variable name="clinAAchange">
-                                  <xsl:value-of select="/GVFClin/feature/clin_aa_change_type"/>
+                                  <xsl:value-of select="clin_aa_change_type"/>
                               </xsl:variable>
                               <code code="48006-1" codeSystemName="LOINC" displayName="Amino acid change type"/>
                               <value xsi:type="CD" code="{$clinAAchange}" codeSystemName="LOINC"/>
@@ -555,7 +555,7 @@
                           <observation>
                               <!-- Clin_DNA_region -->
                               <xsl:variable name="clinDNAreg">
-                                  <xsl:value-of select="/GVFClin/feature/clin_DNA_region"/>
+                                  <xsl:value-of select="clin_DNA_region"/>
                               </xsl:variable>
                               <code code="47999-8" codeSystemName="LOINC" displayName="DNA region name"/>
                               <value xsi:type="CD" code="{$clinDNAreg}" codeSystemName="NCBI"/>
@@ -565,7 +565,7 @@
                           <observation>
                               <!-- Clin_allelic_state -->
                               <xsl:variable name="clinAllicUT">
-                                  <xsl:value-of select="/GVFClin/feature/clin_allelic_state"/>
+                                  <xsl:value-of select="clin_allelic_state"/>
                               </xsl:variable>
                               <code code="53034-5" codeSystemName="LOINC" displayName="Allelic state"/>
                               <value xsi:type="CD" code="{$clinAllicUT}" codeSystemName="LOINC"/>
@@ -575,7 +575,7 @@
                           <observation>
                               <!-- Clin_variant_display_name -->
                               <xsl:variable name="clinDispName">
-                                  <xsl:value-of select="/GVFClin/feature/clin_variant_display_name"/>
+                                  <xsl:value-of select="clin_variant_display_name"/>
                               </xsl:variable>
                               <code code="47998-0" codeSystemName="LOINC" displayName="DNA sequence variation display name"/>
                               <value xsi:type="CD" code="{$clinDispName}"/>
@@ -585,7 +585,7 @@
                           <observation>
                               <!-- Clin_disease_variant_interpret -->
                               <xsl:variable name="clinInterp">
-                                  <xsl:value-of select="/GVFClin/feature/clin_disease_variant_interpret"/>
+                                  <xsl:value-of select="clin_disease_variant_interpret"/>
                               </xsl:variable>
                               <code code="53037-8" codeSystemName="LOINC" displayName="Genetic disease sequence variation interpretation"/>
                               <value xsi:type="CD" code="{$clinInterp}" codeSystemName="LOINC"/>
@@ -595,7 +595,7 @@
                           <observation>
                               <!-- Clin_drug_metabolism_interpret -->
                               <xsl:variable name="clinDrugMet">
-                                  <xsl:value-of select="/GVFClin/feature/clin_drug_metabolism_interpret"/>
+                                  <xsl:value-of select="clin_drug_metabolism_interpret"/>
                               </xsl:variable>
                               <code code="53040-2" codeSystemName="LOINC" displayName="Drug metabolism sequence variation interpretation"/>
                               <value xsi:type="CD" code="{$clinDrugMet}" codeSystemName="LOINC"/>
@@ -605,7 +605,7 @@
                           <observation>
                               <!-- Clin_drug_efficacy_interpret -->
                               <xsl:variable name="clinDrugEff">
-                                  <xsl:value-of select="/GVFClin/feature/clin_drug_efficacy_interpret"/>
+                                  <xsl:value-of select="clin_drug_efficacy_interpret"/>
                               </xsl:variable>
                               <code code="51961-1" codeSystemName="LOINC" displayName="Drug efficacy sequence variation interpretation"/>
                               <value xsi:type="CD" code="{$clinDrugEff}" codeSystemName="LOINC"/>

@@ -8,7 +8,7 @@ our $VERSION = (0.0.1);
 # Run times: bgzip is the bottleneck.
 # standard
 # time: 13m30.796s
-#parallel
+# parallel
 # time: 11m33.998s
 
 ## Directory check ##
@@ -38,7 +38,6 @@ if ($parallel) {
                         "wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz",
                         "wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz",
                         "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz",
-                        "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz",
                 );
@@ -49,7 +48,7 @@ if ($parallel) {
                 
                 # use parallel to download .gz files.
                 warn "{ClinIndex} Downloading needed gz files\n";
-                `cat wgetList | parallel -j+6`;
+                `cat wgetList | parallel -j+5`;
                 
                 # rename to make future files easy to work with
                 system("mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz");
@@ -67,7 +66,7 @@ if ($parallel) {
                 
                 # use parallel to gunzip files.
                 warn "{ClinIndex} Unzipping files\n";
-                `cat gunsList | parallel -j+6`;
+                `cat gunsList | parallel -j+5`;
         }
         
         # Run functions to updated needed files.
@@ -75,6 +74,8 @@ if ($parallel) {
                 warn "{ClinIndex} Updating files\n";
                 system("grep -P '^9606' gene2refseq > 01humanid");
                 system("grep -P '^9606' gene_info > gene_info9606");
+                system("grep -v '^#' clinvar_sigfile.vcf > clinvar_sig.vcf");
+        
         
                 updateGFF();
                 updateSNP();
@@ -86,15 +87,16 @@ if ($parallel) {
                 my @bgzips = (
                         "bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz",
                         "bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz",
+                        "bgzip -c clinvar_sig.vcf > clinvar_sig.vcf.gz",
                 );
                 
                 foreach ( @bgzips ){
                         print $bgFH $_, "\n";
                 }
                 
-                # use parallel to download .gz files.
+                # use parallel to run bgzip
                 warn "{ClinIndex} Running bgzip\n";
-                `cat bgList | parallel -j+6`;
+                `cat bgList | parallel -j+3`;
         }
         
         # make tabix files of all bgzip files
@@ -102,21 +104,22 @@ if ($parallel) {
                 my @tabixs = (
                         "tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz",
                         "tabix -s1 -b2 -e2 Updated.00-All.vcf.gz",
+                        "tabix -s1 -b2 -e2 clinvar_sig.vcf.gz",
                 );
                 
                 foreach ( @tabixs ){
                         print $tabFH $_, "\n";
                 }
                 warn "{ClinIndex} Running tabix\n";
-                `cat tabList | parallel -j+6`;
+                `cat tabList | parallel -j+3`;
         }
         
         # Move files and clean up
-        `mv clinvar_sigfile.vcf gene_condition_source_id ../data/ClinVar/`;
         `mv Updated.00-All.vcf* 00-All.vcf ../data/dbSNP/`;
         `mv gene_info9606 UpdatedRefSeq.txt gene2refseq ../data/NCBI/`;
         `mv Updated.ref_GRCh37.gff3* ref_GRCh37.gff3 ../data/GFF/`;
-        `rm bgList gunsList tabList wgetList 01humanid gene_info`;
+        `mv clinvar_sig.vcf* ../data/ClinVar/`;
+        `rm bgList gunsList tabList wgetList 01humanid gene_info clinvar_sigfile.vcf`;
 
         $wgetFH->close;
         $gunsFH->close;
@@ -156,10 +159,11 @@ else {
         system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz");
         system("mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz");
         system("gunzip clinvar_sigfile.vcf.gz");
-        
-        # clinvar gene id file
-        system("wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/gene_condition_source_id");
-        `mv clinvar_sigfile.vcf gene_condition_source_id ../data/ClinVar/`;
+        system("grep -v '^#' clinvar_sigfile.vcf > clinvar_sig.vcf");
+        system("bgzip -c clinvar_sig.vcf > clinvar_sig.vcf.gz");
+        system("tabix -s1 -b2 -e2 clinvar_sig.vcf.gz");
+        `mv clinvar_sig.vcf* ../data/ClinVar/`;
+        `rm clinvar_sigfile.vcf`;
         
         ## NCBI ##
         print "{ClinIndex} Downloading and NCBI files.\n";

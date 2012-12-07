@@ -5,7 +5,7 @@ use lib '/home/srynearson/Clinomic/lib';
 use Clinomic::Builder;
 use File::Basename;
 
-use Data::Dumper;
+use Data::Printer;
 
 our ($VERSION) = '0.01';
 
@@ -13,7 +13,6 @@ our ($VERSION) = '0.01';
 # build and capture gvf data.
 my $builder = Clinomic::Builder->new_with_options();
 my $feature = $builder->gvfParser;
-
 
 # use wrapper method to run all steps.
 my $clin = $builder->gvfRelationBuild($feature);

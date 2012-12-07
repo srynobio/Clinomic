@@ -30,11 +30,12 @@ has 'file' => (
 );
 
 has 'fasta_file' => (
-    traits    =>['NoGetopt'],
     is       => 'rw',
     isa      => 'Str',
     reader   => 'get_fasta',
     default  => '../data/Fasta/hg19.fa',
+    documentation => q(Path to the fasta reference file used for reference validation.  Default is hg19.
+    )
 );
 
 has 'gff_file' => (
@@ -50,7 +51,7 @@ has 'validate' => (
     isa     => 'Int',
     reader  => 'get_percent',
     default => '90',
-    documentation => q(Validate percentage compared to reference genome(hg19.fa).  Default is 90%.
+    documentation => q(Validate percentage compared to reference genome fasta file.  Default is 90%.
     ),
 );
 
@@ -60,6 +61,14 @@ has 'tabix_dbsnp' => (
     isa     => 'Str',
     reader  => 'get_db_tabix',
     default => '../data/dbSNP/Updated.00-All.vcf.gz',
+);
+
+has 'tabix_clinsig' => (
+    traits    =>['NoGetopt'],
+    is      => 'rw',
+    isa     => 'Str',
+    reader  => 'get_clin_tabix',
+    default => '../data/ClinVar/clinvar_sig.vcf.gz',
 );
 
 has 'pragma' => ( 
@@ -80,7 +89,7 @@ has 'tag_switch' => (
         termExist => 'exists',
         access    => 'accessor',
     },
-    documentation => q(Allows change in feature attribute tag.  Example: disease=Clin_disease_interpret.
+    documentation => q(Allows change in feature attribute tag.  Example: disease -> Clin_disease_interpret.
     ),
 );
 
@@ -89,7 +98,7 @@ has 'export' => (
     isa     => 'Str',
     reader  => 'get_export',
     default => 'gvfclin',
-    documentation => q(Export GVF data to various formats.  Options: gvfclin, xml, hl7, all.  Default is gvfclin.
+    documentation => q(Export GVF file to various formats.  Options: gvfclin, xml, hl7, all.  Default is gvfclin.
     )
 );
 
@@ -165,20 +174,20 @@ sub gvfRelationBuild {
     warn "{Clinomic} Checking dbSNP file.\n";
     my $stp2 = $self->snpCheck($stp1);
     warn "{Clinomic} Checking SO file.\n";
-    my $stp3 = $self->soTypeCheck($stp2);
+    my $stp3 = $self->variantTypeCheck($stp2);
     warn "{Clinomic} Checking ClinVar file.\n";
     my $stp4 = $self->clinicalSig($stp3);
     warn "{Clinomic} Checking allelic state.\n";
-    my $stp5 = $self->allelicCheck($stp4);
+    my $stp5 = $self->allelicStateCheck($stp4);
+    warn "{Clinomic} Checking for hgvs DNA matches.\n";
+    my $stp6 = $self->hgvsDNACheck($stp5);
 
 =cut
-    warn "Checking for hgvs DNA matches.\n";
-    #my $stp6 = $self->hgvsDNACheck($stp5);
     warn "Checking for hgvs protein matches.\n";
     #my $stp7 = $self->hgvsProtCheck($stp6);
 =cut
 
-    return $stp5;
+    return $stp6;
 }
 
 #-----------------------------------------------------------------------------
@@ -224,10 +233,6 @@ sub gvfValadate {
         else {
             $mismatch++;
             # if user wants to update ref to current fasta build this is where it happens.
-  
-  #### NEED TO CONSIDER DELETION ETC #########            
-  #### AND STRAND INFO #########            
-  
             if ( $self->updateRef ) {
                 $i->{'attribute'}->{'Reference_seq'} = $bioSeq;
                 $correct++;
@@ -278,7 +283,7 @@ sub gvfGeneFind {
     }
     
     # create tabix object
-    my $tab = Tabix->new(-data => $self->get_gff) || die "Please input gene Tabix file\n";
+    my $tab = Tabix->new(-data => $self->get_gff) || die "Cannot locate GFF Tabix file\n";
 
     # search the golden set file for a match
     my @updateGVF;
@@ -405,32 +410,11 @@ sub gvfRefBuild {
 
 #------------------------------------------------------------------------------
 
-sub _termUpdate {
-    my ($self, $data) = @_;
-
-    # Takes the list of values from term_switch and looks in $data hash
-    # for the value, then replaces with new key and deletes the old one.
-    my @returnList;
-    foreach my $i ( @{$data} ){
-    
-        while ( my($k, $v) = each %{$i->{'attribute'}} ){
-            if ( $self->termExist($k) ){
-                $i->{'attribute'}->{'clin'}->{$self->access($k)} = $v;
-                delete $i->{'attribute'}->{$k};
-            }
-        }
-        push @returnList, $i; 
-    }
-    return \@returnList;
-}
-
-#------------------------------------------------------------------------------
-
 sub snpCheck {
     my ($self, $data) = @_;
     
     # create tabix object
-    my $tab = Tabix->new(-data => $self->get_db_tabix) || die "Please input dbSNP Tabix file\n";
+    my $tab = Tabix->new(-data => $self->get_db_tabix) || die "Cannot locate dbSNP Tabix file\n";
     
     foreach my $i (@{$data}){
     
@@ -438,11 +422,10 @@ sub snpCheck {
         if ( $i->{'seqid'} !~ /^chr/i ){ $chr = "chr". $i->{'seqid'}; }
         else { $chr = $i->{'seqid'}; }
         
-        my $start = $i->{'start'};
-        my $end   = $i->{'end'};
-        
-        my $dataRef   = $i->{'attribute'}->{'Reference_seq'};
-        my $dataVar   = $i->{'attribute'}->{'Variant_seq'};
+        my $start   = $i->{'start'};
+        my $end     = $i->{'end'};
+        my $dataRef = $i->{'attribute'}->{'Reference_seq'};
+        my $dataVar = $i->{'attribute'}->{'Variant_seq'};
         
         # check the tabix file for matching regions
         my $iter = $tab->query($chr, $start - 1, $end + 1);
@@ -459,14 +442,17 @@ sub snpCheck {
             # first step clean up
             if ( $ref ne $dataRef) { next }
             
-            if ($var =~ /\,{1,}/){
-                my @refvars = split/,/, $var;
-                foreach (@refvars){
-                    if ( $_ eq $dataVar){
-                        $var = $_;
+            my $refVar;
+            if ( $var =~ /\,/ ){
+                my @refVars = split /,/, $var;
+                map {
+                    if ($_ eq $dataVar){
+                        $refVar = $dataVar;
                     }
-                }
+                }@refVars;
             }
+            else { $refVar = $var; }
+            
             # add rsid file to gvf if found
             if ($start eq $start2 && $dataVar eq $var){
                 $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $rsid;
@@ -478,7 +464,7 @@ sub snpCheck {
 
 #------------------------------------------------------------------------------
 
-sub soTypeCheck {
+sub variantTypeCheck {
     my ($self, $data) = @_;
     
     my $so_fh = IO::File->new('../data/SO/SO_LOINC.txt', 'r')
@@ -497,6 +483,7 @@ sub soTypeCheck {
         
         if ($soMatch{$type}){
             $i->{'attribute'}->{'clin'}->{'Clin_variant_type'} = $soMatch{$type};
+            $i->{'type'} = $soMatch{$type};
         }
     }
     return $data;
@@ -508,9 +495,8 @@ sub clinicalSig {
     my ($self, $data) = @_;
     
     # create tabix object
-    # This needs to be added to both Index script and attribute section of the object.
-    my $tab = Tabix->new(-data => '/home/srynearson/Clinomic/data/ClinVar/clinTest.bgz') || die "Please input dbSNP Tabix file\n";    
-    
+    my $tab = Tabix->new(-data => $self->get_clin_tabix) || die "Cannot locate Clinvar Tabix file\n";
+
     # search for matches in gvf file.
     foreach my $i ( @{$data} ){
         chomp $i;
@@ -580,8 +566,8 @@ sub clinicalSig {
         }
         my $clinOrder = $self->_signifOrder(\%clinMatch);
         
-        foreach my $return (@{$clinOrder}){
-            $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = $return if $return;
+        foreach my $r (@{$clinOrder}){
+            $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = $r if $r;
         }
     }        
     return $data;
@@ -589,7 +575,7 @@ sub clinicalSig {
 
 #------------------------------------------------------------------------------
 
-sub allelicCheck {
+sub allelicStateCheck {
     my ($self, $data) = @_;
     
     foreach my $i ( @{$data} ){
@@ -621,38 +607,14 @@ sub allelicCheck {
 
 #------------------------------------------------------------------------------
 
-# This works well, but will need to be filled out
-
 sub hgvsDNACheck {
     my ($self, $data) = @_;
 
-    # list of accepted types. Must be SO sequence_alteration child.
-    my @soType = qw(substitution deletion duplication insertion indel);
+    # list of accepted types. Must be SO sequence_alteration child and hgvs accepted.
+    my @soTypes = qw(substitution deletion duplication insertion indel inversion translocation);
 
     foreach my $i ( @{$data} ){
         chomp $i;
-        
-        # check for alias and add it to clin file, then delete alias line.
-        my $hgvs;
-        my $alias = ( $i->{'attribute'}->{'Alias'} ) ? $i->{'attribute'}->{'Alias'} : 0;
-        if ( $alias ) { $hgvs = $self->_aliasDNACheck($alias) }
-
-=cut        
-        if ($alias =~ /HGVS/){
-            ##my @
-            #my ($tag, $value) = split( /:/, $alias, 2 );
-            my @list = split( /HGVS/, $alias);
-            print $list[0], "\n";
-
-            if ($value =~ /\:c/ || $value =~ /\:g/ || $value =~ /\:m/){
-                $value =~ s/\s+//;
-                $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $value;
-                delete $i->{'attribute'}->{'Alias'};
-                next;
-            }
-        }
-=cut        
-
 
         # check that some genomic information is present, from db. 
         my $genoRef = $i->{'attribute'}->{'clin'}->{'Clin_genomic_reference'};
@@ -665,7 +627,6 @@ sub hgvsDNACheck {
         my $ref   = $i->{'attribute'}->{'Reference_seq'};
         my $type  = $i->{'type'};
         
-        
         # hgvs allow longer seq to be count of seq.
         my @varCount = split//, $var;
         if (scalar(@varCount) > 8){
@@ -673,7 +634,7 @@ sub hgvsDNACheck {
         }
 
         # is type allowed?
-        my $match = first { $_ eq $type }@soType;
+        my $match = first { $_ eq $type } @soTypes;
 
         # looks and adds like java switch.        
         if ($match){
@@ -691,7 +652,20 @@ sub hgvsDNACheck {
             }
             elsif ($match eq 'insertion'){
                 my $hgvsIn = "$genoRef:g.$start" . "_" . "$end" . "ins$var";
-                $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $hgvsIn;            }
+                $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $hgvsIn;
+            }
+            elsif ($match eq 'indel'){
+                my $hgvsIn = "$genoRef:g.$start" . "_" . "$end" . "delins$var";
+                $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $hgvsIn;
+            }
+            elsif ($match eq 'inversion'){
+                my $hgvsIn = "$genoRef:g.$start" . "_" . "$end" . "inv$var";
+                $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $hgvsIn;
+            }
+            #elsif ($match eq 'translocation'){
+            #    my $hgvsIn = "$genoRef:g.$start" . "_" . "$end" . "ins$var";
+            #    $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $hgvsIn;
+            #}
         }
         else { next }
     }
@@ -699,7 +673,7 @@ sub hgvsDNACheck {
 }
 
 #------------------------------------------------------------------------------
-
+=cut
 sub hgvsProtCheck {
     my ($self, $data) = @_;
     
@@ -707,9 +681,8 @@ sub hgvsProtCheck {
     
     foreach my $i ( @{$data} ){
         
-        my $genoRef = $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'};
-        #delete $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'};
-        
+        my $proRef = $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'};
+        #### Clin_HGVS_protein
         
         # the gvf kids again.
         my $start = $i->{'start'};
@@ -726,6 +699,7 @@ sub hgvsProtCheck {
             delete $i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'};
             next;
         }
+        
         # ref required and built first.        
         my $refName;
         if ($rAA || $rCode){
@@ -779,7 +753,7 @@ sub hgvsProtCheck {
     }
     return $data;
 }
-
+=cut
 #------------------------------------------------------------------------------
 
 sub _pragmas {
@@ -812,9 +786,30 @@ sub _pragmas {
     }
     
     # check or add only required pragma.
-    if (! exists $p{'gvf_version'}) { $p{'gvf-version'} = [1.06] }
+    if (! exists $p{'gvf_version'}) { $p{'gvf_version'} = [1.06] }
     
     $self->set_pragmas(\%p);
+}
+
+#------------------------------------------------------------------------------
+
+sub _termUpdate {
+    my ($self, $data) = @_;
+
+    # Takes the list of values from term_switch and looks in $data hash
+    # for the value, then replaces with new key and deletes the old one.
+    my @returnList;
+    foreach my $i ( @{$data} ){
+    
+        while ( my($k, $v) = each %{$i->{'attribute'}} ){
+            if ( $self->termExist($k) ){
+                $i->{'attribute'}->{'clin'}->{$self->access($k)} = $v;
+                delete $i->{'attribute'}->{$k};
+            }
+        }
+        push @returnList, $i; 
+    }
+    return \@returnList;
 }
 
 #------------------------------------------------------------------------------

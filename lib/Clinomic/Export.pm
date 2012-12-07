@@ -4,6 +4,8 @@ use IO::File;
 use File::Basename;
 use XML::Twig;
 
+use Data::Dumper;
+
 with 'MooseX::Getopt';
 
 use lib '../lib';
@@ -31,22 +33,22 @@ sub exporter {
     my $type = $self->get_export;
     
     if ($type eq 'gvfclin'){
-        warn "{Clinomic}Building GVFClin file.\n";
+        warn "{Clinomic} Building GVFClin file.\n";
         $self->_toGVF($gvf);
     }
     elsif ($type eq 'xml'){
-        warn "{Clinomic}Building XML.\n";
+        warn "{Clinomic} Building XML.\n";
         $self->_toXML($gvf);
         $self->_completeXML;
     }
     elsif ($type eq 'hl7'){
-        warn "{Clinomic}Building HL7-XML file.\n";
+        warn "{Clinomic} Building HL7-XML file.\n";
         $self->_toXML($gvf);
         $self->_completeXML;
         $self->_toGTR($gvf);
     }
     elsif( $type eq 'all'){
-        warn "{Clinomic}Building all output files.\n";
+        warn "{Clinomic} Building all output files.\n";
         $self->_toGVF($gvf);
         $self->_toXML($gvf);
         $self->_completeXML;
@@ -346,7 +348,7 @@ sub _featureXML {
 
 #-----------------------------------------------------------------------------
 
-sub _variantTwig{
+sub _variantTwig {
     my ($self, $eff) = @_;
      
     my $ct = 1; 

@@ -44,10 +44,7 @@ sub _build_database {
     warn "{ClinDatabase} Building Database\n";
     $self->hgnc;
     $self->refseq;
-    ###$self->genetic_association; 
-    $self->clinvar;
     ###$self->drug_bank;
-    #$self->clinInterpret;
 }
 
 #------------------------------------------------------------------------------
@@ -98,55 +95,6 @@ sub _populate_refseq {
 
 #------------------------------------------------------------------------------
 
-sub _populate_genetic_assoc {
-    my ($self, $genetic) = @_;
-
-    my $xcl = $self->get_dbixclass;
-    my $match = $self->simple_match($genetic);    
-
-    foreach my $i ( @{$match} ) {
-        $xcl->resultset('Genetic_association')->create({
-            symbol        => $i->[0]->{'symbol'},
-            mesh_disease  => $i->[0]->{'disease'},
-            disease_class => $i->[0]->{'class'},
-            pubmed_id     => $i->[0]->{'pubmed'},
-            hgnc_gene_id  => $i->[1],
-        });
-    }
-}
-
-#------------------------------------------------------------------------------
-
-sub _populate_clinvar {
-    my ($self, $clin) = @_;
-    my $xcl = $self->get_dbixclass;
-    
-    my @gColumns = qw/ symbol id  /;
-    my $genetic = $self->xclassGrab('Hgnc_gene', \@gColumns);
-
-    my @symbols;
-    while ( my $result = $genetic->next ){
-        my $list = {
-            symbol => $result->symbol,
-            id     => $result->id,
-        };
-        push @symbols, $list; 
-    }
-    
-    my $match = $self->match_builder($clin, \@symbols, 'simple');
-    
-    foreach my $i (@{$match}) {
-        $xcl->resultset('Clinvar')->create({
-            umls_concept_id => $i->[0]->{'umls'},
-            snomed_id       => $i->[0]->{'source_id'},
-            disease         => $i->[0]->{'disease'},
-            hgnc_gene_id    => $i->[1],
-        });
-    }
-}
-
-#------------------------------------------------------------------------------
-
 sub _populate_drug_info {
     my ($self, $dbank) = @_;
     
@@ -157,40 +105,6 @@ sub _populate_drug_info {
        $xcl->resultset('Drug_bank')->create({
             generic_name => $i->[0]->{'drug'},
             hgnc_gene_id => $i->[1],
-        });
-    }
-}
-
-#------------------------------------------------------------------------------
-
-sub _populate_clinInterpret {
-    my ($self, $clin) = @_;
-    
-    my $xcl = $self->get_dbixclass;
-    
-    my @hColumns = qw/ symbol id /;
-    my $trans_id = $self->xclassGrab('Hgnc_gene', \@hColumns);
-    
-    my @transcript;
-    while ( my $result = $trans_id->next ){
-        my $list = {
-            symbol => $result->symbol,
-            id     => $result->id,
-        };
-        push @transcript, $list; 
-    }
-    my $match = $self->match_builder($clin, \@transcript, 'clinInterpt');
-
-    foreach my $i ( @{$match} ){
-        $xcl->resultset('Clinvar_clin_sig')->create({
-            ref_seq  => $i->[0]->{'ref_seq'},
-            var_seq  => $i->[0]->{'var_seq'},
-            rsid     => $i->[0]->{'rsid'},
-            location => $i->[0]->{'pos'},
-            clnsig   => $i->[0]->{'clin_data'}->{'CLNSIG'},
-            clncui   => $i->[0]->{'clin_data'}->{'CLNCUI'},
-            clnhgvs  => $i->[0]->{'clin_data'}->{'CLNHGVS'},
-            hgnc_gene_id => $i->[1]->{'id'},
         });
     }
 }

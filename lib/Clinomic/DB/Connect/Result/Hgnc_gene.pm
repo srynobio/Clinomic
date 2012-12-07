@@ -27,20 +27,6 @@ __PACKAGE__->has_many(
 );
 
 __PACKAGE__->has_many(
-  "clinvar",
-  "Clinomic::DB::Connect::Result::Clinvar",
-  { "foreign.hgnc_gene_id" => "self.id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-__PACKAGE__->has_many(
-  "genetic_association",
-  "Clinomic::DB::Connect::Result::Genetic_association",
-  { "foreign.hgnc_gene_id" => "self.id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-__PACKAGE__->has_many(
   "refseq",
   "Clinomic::DB::Connect::Result::Refseq",
   { "foreign.hgnc_gene_id" => "self.id" },
