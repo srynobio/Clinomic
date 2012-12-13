@@ -80,7 +80,7 @@ sub _toGVF {
     while (my ($k, $v ) = each %{$pragma}){
         $k =~ s/\_/\-/g;
         if (ref $v->[0]) {
-                print $outFH "##$k ";
+            print $outFH "##$k ";
             while (my ($key, $v) = each %{$v->[0]}){
                 print $outFH "$key=$v;";
             }

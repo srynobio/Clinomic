@@ -11,6 +11,12 @@ our $VERSION = (0.0.1);
 # parallel
 # time: 11m33.998s
 
+
+
+#### NOTES ####
+# maybe add option to switch between curl and wget
+
+
 ## Directory check ##
 ## And add sub directories.
 unless ( -d '../data' ) { die "\n../data directory needed to run this script.\n" }
@@ -18,6 +24,7 @@ unless ( -d '../data' ) { die "\n../data directory needed to run this script.\n"
 `mkdir ../data/dbSNP`;
 `mkdir ../data/ClinVar`;
 `mkdir ../data/NCBI`;
+`mkdir ../data/GTF`;
 
 # check if user had parallel installed 
 my $parallel = `parallel --version`;
@@ -40,6 +47,13 @@ if ($parallel) {
                         "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz",
+                        
+                        
+                        
+                        "wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz",
+                        # grep -P '^(\d+)|^X|^Y' Homo_sapiens.GRCh37.69.gtf > Homo_sapiens.gtf
+                        # sort -k1,1 -k4,4n Homo_sapiens.gtf | bgzip -c > Homo_sapiens.gtf.gz
+                        # tabix Homo_sapiens.gtf.gz 
                 );
                 
                 foreach ( @wgetItems ){

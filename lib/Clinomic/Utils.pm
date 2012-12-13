@@ -227,24 +227,26 @@ sub _signifOrder {
         };
         
         # quick change the numbers into loinc value
-        @{$aryRef}[0] =~ s/(\d+)/$sigLookup->{$1}/g;
+        @{$aryRef}[1] =~ s/(\d+)/$sigLookup->{$1}/g;
          
-        my @LoincName = split /\,/, @{$aryRef}[0];
-        my @clinVars  = split /\,/, @{$aryRef}[3];
-        my @db        = split /\,/, @{$aryRef}[1];
-        my @ids       = split /\,/, @{$aryRef}[2];
+        my @hgvs      = split /\,/, @{$aryRef}[0];
+        my @LoincName = split /\,/, @{$aryRef}[1]; 
+        my @clinVars  = split /\,/, @{$aryRef}[4]; 
+        my @db        = split /\,/, @{$aryRef}[3]; 
+        my @ids       = split /\,/, @{$aryRef}[3]; 
         my $gvfVar    = @{$aryRef}[4];
         
         # if Vars match make a new array with the data.
         while ( @clinVars ){
-            my $clinVar = shift @clinVars;
-            my $name    = shift @LoincName;
-            my $db      = shift @db;
-            my $id      = shift @ids;
+            my $clinHgvs = shift @hgvs;
+            my $clinVar  = shift @clinVars;
+            my $name     = shift @LoincName;
+            my $db       = shift @db;
+            my $id       = shift @ids;
             if ( $gvfVar eq $clinVar){
                 # swith the push comment to add the disease information. 
                 #push @clinMatches, join(',', $name, $db, $id);
-                push @clinMatches, $name;
+                push @clinMatches, $name, $clinHgvs;
             }
         }
     }

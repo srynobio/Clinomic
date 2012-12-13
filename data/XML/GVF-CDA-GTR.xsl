@@ -359,49 +359,49 @@
                                   </variant_freq>
                                   <variant_effect>
                                       <sequence_variant_1>
-                                          <xsl:value-of select="sequence_variant_1"/>
+                                          <xsl:value-of select="variant_effect/sequence_variant_1"/>
                                       </sequence_variant_1>
                                       <index_1>
-                                          <xsl:value-of select="index_1"/>
+                                          <xsl:value-of select="variant_effect/index_1"/>
                                       </index_1>
                                       <feature_type_1>
-                                          <xsl:value-of select="feature_type_1"/>
+                                          <xsl:value-of select="variant_effect/feature_type_1"/>
                                       </feature_type_1>
                                       <feature_id1_1>
-                                          <xsl:value-of select="feature_id1_1"/>
+                                          <xsl:value-of select="variant_effect/feature_id1_1"/>
                                       </feature_id1_1>
                                       <feature_id2_1>
-                                          <xsl:value-of select="feature_id2_1"/>
+                                          <xsl:value-of select="variant_effect/feature_id2_1"/>
                                       </feature_id2_1>
                                       <sequence_variant_2>
-                                          <xsl:value-of select="sequence_variant_2"/>
+                                          <xsl:value-of select="variant_effect/sequence_variant_2"/>
                                       </sequence_variant_2>
                                       <index_2>
-                                          <xsl:value-of select="index_2"/>
+                                          <xsl:value-of select="variant_effect/index_2"/>
                                       </index_2>
                                       <feature_type_2>
-                                          <xsl:value-of select="feature_type_2"/>
+                                          <xsl:value-of select="variant_effect/feature_type_2"/>
                                       </feature_type_2>
                                       <feature_id1_2>
-                                          <xsl:value-of select="feature_id1_2"/>
+                                          <xsl:value-of select="variant_effect/feature_id1_2"/>
                                       </feature_id1_2>
                                       <feature_id2_2>
-                                          <xsl:value-of select="feature_id2_2"/>
+                                          <xsl:value-of select="variant_effect/feature_id2_2"/>
                                       </feature_id2_2>                      
                                       <sequence_variant_3>
-                                          <xsl:value-of select="sequence_variant_3"/>
+                                          <xsl:value-of select="variant_effect/sequence_variant_3"/>
                                       </sequence_variant_3>
                                       <index_3>
-                                          <xsl:value-of select="index_3"/>
+                                          <xsl:value-of select="variant_effect/index_3"/>
                                       </index_3>
                                       <feature_type_3>
-                                          <xsl:value-of select="feature_type_3"/>
+                                          <xsl:value-of select="variant_effect/feature_type_3"/>
                                       </feature_type_3>
                                       <feature_id1_3>
-                                          <xsl:value-of select="feature_id1_3"/>
+                                          <xsl:value-of select="variant_effect/feature_id1_3"/>
                                       </feature_id1_3>
                                       <feature_id2_3>
-                                          <xsl:value-of select="feature_id2_3"/>
+                                          <xsl:value-of select="variant_effect/feature_id2_3"/>
                                       </feature_id2_3>
                                   </variant_effect>
                                   <start_range>

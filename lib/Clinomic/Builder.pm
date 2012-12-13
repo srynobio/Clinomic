@@ -71,6 +71,14 @@ has 'tabix_clinsig' => (
     default => '../data/ClinVar/clinvar_sig.vcf.gz',
 );
 
+has 'tabix_gtf' => (
+    traits    =>['NoGetopt'],
+    is      => 'rw',
+    isa     => 'Str',
+    reader  => 'get_gtf_tabix',
+    default => '../data/GTF/Homo_sapiens.gtf.gz',
+);
+
 has 'pragma' => ( 
     traits    =>['NoGetopt'],
     is        => 'rw',
@@ -181,6 +189,8 @@ sub gvfRelationBuild {
     my $stp5 = $self->allelicStateCheck($stp4);
     warn "{Clinomic} Checking for hgvs DNA matches.\n";
     my $stp6 = $self->hgvsDNACheck($stp5);
+    warn "{Clinomic} Checking for region information.\n";
+    my $stp7 = $self->regionFinder($stp6);
 
 =cut
     warn "Checking for hgvs protein matches.\n";
@@ -258,6 +268,8 @@ sub gvfGeneFind {
     
     my ($self, $data) = @_;
 
+    # might move this to not use db.
+
     my @hColumns = qw/ symbol id /;
     my $hgnc = $self->xclassGrab('Hgnc_gene', \@hColumns);
 
@@ -276,6 +288,10 @@ sub gvfGeneFind {
         chomp $line;
         
         if ($line !~ /^9606/ ) { next }
+        
+        # add line here grep only hgnc genes in file.
+        
+        
         my ($taxId, $geneId, $symbol, undef) = split/\t/, $line;
         if ($hgnc{$symbol}){
             $ncbi{$geneId} = $symbol;
@@ -550,12 +566,8 @@ sub clinicalSig {
                 my $tag   = $1;
                 my $value = $2;
                
-                if ( $tag =~ /CLNSIG/ or /CLNDSDB/ or /CLNDSDBID/) {
+                if ( $tag =~ /CLNSIG/ or /CLNDSDB/ or /CLNDSDBID/ or /CLNHGVS/) {
                     push @{ $clinMatch{$fst8[2]} }, $value;
-                }
-                # also add RSID and HGVS info to feature line if not present
-                if ( $tag eq 'CLNHGVS'){
-                    $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $value;
                 }
                 unless ( $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} ) {
                     $i->{'attribute'}->{'clin'}->{'Clin_variant_id'} = $fst8[2];
@@ -566,8 +578,9 @@ sub clinicalSig {
         }
         my $clinOrder = $self->_signifOrder(\%clinMatch);
         
-        foreach my $r (@{$clinOrder}){
-            $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = $r if $r;
+        foreach my $r ($clinOrder){
+            $i->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'} = $r->[0] if $r->[0];
+            $i->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'} = $r->[1] if $r->[1];
         }
     }        
     return $data;
@@ -603,6 +616,67 @@ sub allelicStateCheck {
         }
     }
     return $data;
+}
+
+#------------------------------------------------------------------------------
+
+sub regionFinder {
+    my ($self, $data) = @_;
+    
+    # create tabix object
+    my $tab = Tabix->new(-data => $self->get_gtf_tabix) || die "Cannot locate GTF Tabix file\n";
+
+    # search for matches in gvf file.
+    foreach my $i ( @{$data} ){
+        chomp $i;
+        
+        # Basic data needed from GVF file.
+        my $gvfChr   = $i->{'seqid'}; 
+        my $gvfStart = $i->{'start'};
+        my $gvfEnd   = $i->{'end'};
+    
+        # check the tabix file for matching regions
+        my $iter = $tab->query($gvfChr, $gvfStart - 1, $gvfEnd + 1);
+      
+        my %regions;
+        while (my $read = $tab->read($iter)) {
+        
+            my @columns = split /\t/, $read;
+            my @atts    = split /;/, $columns[8];
+            
+            unless ($columns[2] ne 'CDS') { next; }
+            
+            my (undef, $feature) = ($atts[2] =~ /(\S+)\s+\"(\d+)\"/);
+            my (undef, $trans)   = ($atts[5] =~ /(\S+)\s+\"(\S+)\"/);
+            
+            push @{$regions{ $columns[2]} }, {
+                feature_number => $feature,
+                id             => $gvfStart,
+                transcript     => $trans,
+            };
+        }
+        
+        my $clinRegion;
+        while (my ($feature, $matches) = each %regions){
+            foreach my $fd ( @{$matches} ) {
+                if ($fd->{id} eq $gvfStart){
+                    if ( $feature eq 'start_codon'){
+                        my $addLine = "$feature $fd->{transcript},";
+                        $clinRegion .= $addLine;  
+                    }
+                    else {
+                        my $addLine = "$feature $fd->{feature_number} $fd->{transcript},";
+                        $clinRegion .= $addLine;
+                    }
+                }
+            }
+        }
+        if ( $clinRegion ){
+            $clinRegion =~ s/\,$//g;
+            $i->{'attribute'}->{'clin'}->{'Clin_DNA_region'} = $clinRegion;
+        }
+    }
+    return ($data);
 }
 
 #------------------------------------------------------------------------------
