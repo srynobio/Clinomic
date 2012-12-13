@@ -4,11 +4,8 @@ use IO::File;
 use File::Basename;
 use XML::Twig;
 
-use Data::Dumper;
-
 with 'MooseX::Getopt';
 
-use lib '../lib';
 
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
@@ -63,7 +60,7 @@ sub exporter {
 
 sub _toGVF {
     my ($self, $gvf) = @_;
-
+    
     # get the file name
     my $basename = basename($self->get_file, ".gvf");
     my $outfile  = "$basename" . '.gvfclin';

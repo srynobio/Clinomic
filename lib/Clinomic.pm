@@ -1,4 +1,4 @@
-package Clinomic::Builder; 
+package Clinomic; 
 use Moose;
 use Tabix;
 use IO::File;
@@ -7,17 +7,21 @@ use Bio::DB::Fasta;
 use Bio::Tools::CodonTable;  
 use File::Basename;
 
-extends 'Clinomic::Base';
+with 'Clinomic::Roles';
 with 'MooseX::Getopt';
-
-use Data::Dumper;
-
-
-use lib '../lib';
 
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
+
+has 'data_directory' => (
+    traits    =>['NoGetopt'],
+    is       => 'rw',
+    isa      => 'Str',
+    default  => '../data/',
+    writer   => 'set_directory',
+    reader   => 'get_directory',
+);
 
 has 'file' => (
     is       => 'rw',
@@ -117,57 +121,8 @@ has 'ref_update' =>(
     documentation => q(Allows in-place change of reference sequence to match current build. Options are 1 or 0, default is 0.  If this option is used validate option is not required.),
 );
 
-
-has '+dbixclass' => (
-    traits  => ['NoGetopt'],
-);
-
 #-----------------------------------------------------------------------------
 #------------------------------- Methods -------------------------------------
-#-----------------------------------------------------------------------------
-
-sub gvfParser {
-    my ( $self, $data ) = @_;
-
-    my $feature_line = $self->_file_splitter('feature');
-    
-    # extract out pragmas and store them in object;
-    $self->_pragmas;
-    
-    my ( @return_list );
-    foreach my $lines( @{$feature_line} ) {
-        chomp $lines;
-        
-        my ($seq_id, $source, $type, $start, $end, $score, $strand, $phase, $attribute) = split(/\t/, $lines);
-        my @attributes_list = split(/\;/, $attribute) if $attribute;
-
-        next if ! $seq_id;
-        
-        my %atts;
-        foreach my $attributes (@attributes_list) {
-            $attributes =~ /(.*)=(.*)/g;
-            $atts{$1} = $2;
-        }
-        my $value = $self->_variant_builder(\%atts);
-        
-        my $feature = {
-            seqid  => $seq_id,
-            source => $source,
-            type   => $type,
-            start  => $start,
-            end    => $end,
-            score  => $score,
-            strand => $strand,
-            attribute => {
-                %{$value}
-            },
-        };
-        push @return_list, $feature;
-    }
-    return \@return_list;
-}
-
-
 #-----------------------------------------------------------------------------
 
 sub gvfRelationBuild {
@@ -189,8 +144,9 @@ sub gvfRelationBuild {
     my $stp5 = $self->allelicStateCheck($stp4);
     warn "{Clinomic} Checking for hgvs DNA matches.\n";
     my $stp6 = $self->hgvsDNACheck($stp5);
-    warn "{Clinomic} Checking for region information.\n";
-    my $stp7 = $self->regionFinder($stp6);
+    
+    #warn "{Clinomic} Checking for region information.\n";
+    #my $stp7 = $self->regionFinder($stp6);
 
 =cut
     warn "Checking for hgvs protein matches.\n";
@@ -268,36 +224,9 @@ sub gvfGeneFind {
     
     my ($self, $data) = @_;
 
-    # might move this to not use db.
+    # build hgnc approved gene list.
+    my $ncbi = $self->hgncGene;
 
-    my @hColumns = qw/ symbol id /;
-    my $hgnc = $self->xclassGrab('Hgnc_gene', \@hColumns);
-
-    my %hgnc;
-    while ( my $result = $hgnc->next ){
-        $hgnc{$result->symbol} = $result->id;
-    }
-    
-    # create gene_id and symbol list from gene_info file.
-    my $ncbi_gene = $self->get_directory . "/" . 'NCBI' . "/" . "gene_info9606";
-    my $ncbi_fh   = IO::File->new($ncbi_gene, 'r') || die "Can not open NCBI/gene_info file\n";
-    
-    # build hash of ncbi gene_id with only genes matching hgnc list
-    my %ncbi;
-    foreach my $line ( <$ncbi_fh> ){
-        chomp $line;
-        
-        if ($line !~ /^9606/ ) { next }
-        
-        # add line here grep only hgnc genes in file.
-        
-        
-        my ($taxId, $geneId, $symbol, undef) = split/\t/, $line;
-        if ($hgnc{$symbol}){
-            $ncbi{$geneId} = $symbol;
-        }
-    }
-    
     # create tabix object
     my $tab = Tabix->new(-data => $self->get_gff) || die "Cannot locate GFF Tabix file\n";
 
@@ -338,7 +267,7 @@ sub gvfGeneFind {
                         $_ =~ /(.*)=(.*)/g;
                         my ($gene, undef) = split /,/, $2;
                         my ($tag, $value) = split /:/, $gene;
-                        my $geneMatch = ( $ncbi{$value} ) ? $ncbi{$value} : 'NULL';
+                        my $geneMatch = ( $ncbi->{$value} ) ? $ncbi->{$value} : 'NULL';
                         next if $geneMatch eq 'NULL';
                         
                         my $effect = {
@@ -370,31 +299,9 @@ sub gvfGeneFind {
 
 sub gvfRefBuild {
     my ($self, $data) = @_;
-    my $xcl = $self->get_dbixclass;
 
-    # capture data from GeneDatabase sqlite3 file.
-    my $hgnc = $xcl->resultset('Hgnc_gene')->search([
-        undef,
-        { columns => [qw/ symbol id /] },
-        {
-            +columns => [qw/ refseq.genomic_refseq refseq.protein_refseq /],
-            join => ['refseq'],
-        }
-    ]);
-    
-    # generate arrayref of hashrefs
-    my %genedata;
-    while (my $i = $hgnc->next){
-            
-        my $ref = $i->refseq;
-        while (my $r = $ref->next){
-            push @{$genedata{$i->symbol}}, {
-                genomic_ref  => $r->genomic_refseq,
-                HGVS_protein => $r->protein_refseq,
-            };
-        }
-    }
-    
+    my $refInfo = $self->refseq;
+
     # add db clin informaton to gvf file.
     foreach my $t (@{$data}) {
         
@@ -410,13 +317,10 @@ sub gvfRefBuild {
         
         # search the db for matching gene names, and add all clin data
         # to working gvf file
-        if ( $genedata{$gene} ){
-            my $ref = $genedata{$gene};
-            
+        if ( $refInfo->{$gene} ){
             my $clin = {
                 Clin_gene              => $gene,
-                Clin_genomic_reference => $ref->[1]->{'genomic_ref'},
-                Clin_HGVS_protein      => $ref->[1]->{'HGVS_protein'},
+                Clin_genomic_reference => $refInfo->{$gene}->{genomic_acc},
             };
             $t->{'attribute'}->{'clin'} = $clin;
         }

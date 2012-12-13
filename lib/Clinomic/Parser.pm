@@ -10,71 +10,28 @@ use Data::Dumper;
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
 
-sub hgnc {
+sub hgncGene {
+    
     my $self = shift;
     
-    # uses the relationship file to collect hgnc_gene information 
-    my $hgnc_file = $self->get_directory . "/" . 'HGNC' . "/" . "HGNC_data";
-    my $hgnc_fh   = IO::File->new($hgnc_file, 'r') || die "Can not open HGNC/HGNC_data file\n";
+    # create gene_id and symbol list from gene_info file.
+    my $ncbi_gene = $self->get_directory . "/" . 'NCBI' . "/" . "gene_info9606";
+    my $ncbi_fh   = IO::File->new($ncbi_gene, 'r') || die "Can not open NCBI/gene_info file\n";
 
-    my @hgnc_list;
-    foreach my $line ( <$hgnc_fh> ){
+    # build hash of ncbi gene_id with only genes matching hgnc list
+    my %ncbi;
+    foreach my $line ( <$ncbi_fh> ){
         chomp $line;
         
-        next if $line !~ /^HGNC:(\d+)/;
-        my ( undef, $symbol, $name, $chromo, $acc_numb, $pubmed, $refseqid, $omim, $refseq ) = split /\t/, $line;
-        
-        if ( ! $symbol ){ next }
-        
-        my $hgnc = {
-            symbol  => $symbol,
-            chromo  => $chromo,
-        };
-        push @hgnc_list, $hgnc;
+        unless ($line =~ /^9606/ ) { next }
+        unless ($line =~ /HGNC:(\d+)/) { next }        
+
+        my ($taxId, $geneId, $symbol, undef) = split/\t/, $line;
+        $ncbi{$geneId} = $symbol;
     }
-    $hgnc_fh->close;
-    $self->_populate_genes(\@hgnc_list);
+    
+    return \%ncbi;
 }
-
-#------------------------------------------------------------------------------
-
-#sub drug_bank {
-#    my $self = shift;
-#        
-#    # uses the relationship file to collect drug information
-#    # better then contacting your dealer.
-#    my $drug_file = $self->get_directory . "/" . 'Drug_Bank' . "/" . "drugbank.txt";
-#    my $drug_fh   = IO::File->new($drug_file, 'r') || die "Can not open Drug_Bank/drugbank.txt file\n";
-#    
-#    local $/ = '#';
-#    my ( $drug, $target, $hgnc, @dbank );
-#    
-#    foreach my $line ( <$drug_fh> ){
-#        chomp $line;
-#    
-#        $line =~ s/\n//g;
-#        $line =~ s/^\s//g;
-#        
-#        if ( $line =~ /^Generic_Name:(.*)/ ) {
-#            $drug = $1;
-#        }
-#        elsif ( $line =~ /^Drug_Target_1_Gene_Name:(.*)/ ) {
-#            $target = $1;
-#        }
-#        elsif ( $line =~ /^Drug_Target_1_HGNC_ID:(.*)/ ) {
-#            $hgnc = $1;
-#    
-#            my $drug = {
-#                drug   => $drug,
-#                symbol => $target,
-#            };
-#            push @dbank, $drug;
-#        }
-#        else { next }
-#    }
-#    $drug_fh->close;
-#    $self->_populate_drug_info(\@dbank);
-#}
 
 #------------------------------------------------------------------------------
 
@@ -85,7 +42,7 @@ sub refseq {
     my $ref_file = $self->get_directory . "/" . 'NCBI' . "/" . "UpdatedRefSeq.txt";
     my $ref_fh   = IO::File->new($ref_file, 'r') || die "Can not open NCBI/UpdatedRefSeq.txt file\n";
     
-    my @refseq;
+    my %refseq;
     foreach my $line ( <$ref_fh> ){
         chomp $line;
         
@@ -98,18 +55,84 @@ sub refseq {
         unless ( $refs[12] =~ /Reference GRCh37.p10/ ) { next }
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/) { next }
         
-        my $refhash = {
-            symbol        => $refs[1],
-            transcript_id => $refs[3],
-            prot_acc      => $refs[5],
-            genomic_acc   => $refs[7],
+        
+        $refseq{ $refs[1] } = {
+            genomic_acc => $refs[7],
             start         => $refs[9],
             end           => $refs[10],
         };
-        push @refseq, $refhash;
     }
     $ref_fh->close;
-    $self->_populate_refseq(\@refseq);    
+    return (\%refseq);
+}
+
+#------------------------------------------------------------------------------
+
+sub gvfParser {
+    my ( $self, $data ) = @_;
+
+    my $feature_line = $self->_file_splitter('feature');
+    
+    # extract out pragmas and store them in object;
+    $self->_pragmas;
+    
+    my ( @return_list );
+    foreach my $lines( @{$feature_line} ) {
+        chomp $lines;
+        
+        my ($seq_id, $source, $type, $start, $end, $score, $strand, $phase, $attribute) = split(/\t/, $lines);
+        my @attributes_list = split(/\;/, $attribute) if $attribute;
+
+        next if ! $seq_id;
+        
+        my %atts;
+        foreach my $attributes (@attributes_list) {
+            $attributes =~ /(.*)=(.*)/g;
+            $atts{$1} = $2;
+        }
+        my $value = $self->_variant_builder(\%atts);
+        
+        my $feature = {
+            seqid  => $seq_id,
+            source => $source,
+            type   => $type,
+            start  => $start,
+            end    => $end,
+            score  => $score,
+            strand => $strand,
+            attribute => {
+                %{$value}
+            },
+        };
+        push @return_list, $feature;
+    }
+    return \@return_list;
+}
+
+#------------------------------------------------------------------------------
+
+sub _file_splitter {
+    my ( $self, $request ) = @_;
+
+    my $obj_fh;
+    open ( $obj_fh, "<", $self->get_file ) || die "File " . $self->get_file . " can not be opened\n";
+
+    my ( @pragma, @feature_line );
+    foreach my $line ( <$obj_fh> ){
+        chomp $line;
+    
+        $line =~ s/^\s+$//g;
+
+        # captures pragma lines.
+        if ($line =~ /^#{1,}/) {
+            push @pragma, $line;
+        }
+        # or feature_line
+        else { push @feature_line, $line; }
+    }
+
+    if ( $request eq 'pragma') { return \@pragma }
+    if ( $request eq 'feature') { return \@feature_line }
 }
 
 #------------------------------------------------------------------------------

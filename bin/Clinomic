@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use lib '/home/srynearson/Clinomic/lib';
-use Clinomic::Builder;
+use Clinomic;
 use File::Basename;
 
 use Data::Dumper;
@@ -11,12 +11,10 @@ our ($VERSION) = '0.01';
 
 # obj building.
 # build and capture gvf data.
-my $builder = Clinomic::Builder->new_with_options();
+my $builder = Clinomic->new_with_options();
+
 my $feature = $builder->gvfParser;
 
-#$builder->clinicalSig($feature);
-
-#__END__
 # use wrapper method to run all steps.
 my $clin = $builder->gvfRelationBuild($feature);
 

@@ -47,13 +47,11 @@ if ($parallel) {
                         "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz",
-                        
-                        
-                        
-                        "wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz",
+                        #"wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz",
                         # grep -P '^(\d+)|^X|^Y' Homo_sapiens.GRCh37.69.gtf > Homo_sapiens.gtf
                         # sort -k1,1 -k4,4n Homo_sapiens.gtf | bgzip -c > Homo_sapiens.gtf.gz
-                        # tabix Homo_sapiens.gtf.gz 
+                        # tabix Homo_sapiens.gtf.gz
+                        # mv Homo_sapiens.* ../data/GTF/
                 );
                 
                 foreach ( @wgetItems ){
