@@ -12,9 +12,11 @@ our ($VERSION) = '0.01';
 # obj building.
 # build and capture gvf data.
 my $builder = Clinomic->new_with_options();
-
 my $feature = $builder->gvfParser;
 
+$builder->xmltest($feature);
+
+__END__
 # use wrapper method to run all steps.
 my $clin = $builder->gvfRelationBuild($feature);
 

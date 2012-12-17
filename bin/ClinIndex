@@ -47,11 +47,7 @@ if ($parallel) {
                         "wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_2012*.vcf.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz",
                         "wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz",
-                        #"wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz",
-                        # grep -P '^(\d+)|^X|^Y' Homo_sapiens.GRCh37.69.gtf > Homo_sapiens.gtf
-                        # sort -k1,1 -k4,4n Homo_sapiens.gtf | bgzip -c > Homo_sapiens.gtf.gz
-                        # tabix Homo_sapiens.gtf.gz
-                        # mv Homo_sapiens.* ../data/GTF/
+                        "wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz",
                 );
                 
                 foreach ( @wgetItems ){
@@ -60,7 +56,7 @@ if ($parallel) {
                 
                 # use parallel to download .gz files.
                 warn "{ClinIndex} Downloading needed gz files\n";
-                `cat wgetList | parallel -j+5`;
+                `cat wgetList | parallel -j+6`;
                 
                 # rename to make future files easy to work with
                 system("mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz");
@@ -87,6 +83,9 @@ if ($parallel) {
                 system("grep -P '^9606' gene2refseq > 01humanid");
                 system("grep -P '^9606' gene_info > gene_info9606");
                 system("grep -v '^#' clinvar_sigfile.vcf > clinvar_sig.vcf");
+                system("grep -P '^(\\d+)|^X|^Y' Homo_sapiens.GRCh37.69.gtf > Homo_sapiens.gtf");
+
+
         
         
                 updateGFF();
@@ -100,6 +99,8 @@ if ($parallel) {
                         "bgzip -c Updated.ref_GRCh37.gff3 > Updated.ref_GRCh37.gff3.gz",
                         "bgzip -c Updated.00-All.vcf > Updated.00-All.vcf.gz",
                         "bgzip -c clinvar_sig.vcf > clinvar_sig.vcf.gz",
+                        "sort -k1,1 -k4,4n Homo_sapiens.gtf | bgzip -c > Homo_sapiens.gtf.gz",
+
                 );
                 
                 foreach ( @bgzips ){
@@ -108,7 +109,7 @@ if ($parallel) {
                 
                 # use parallel to run bgzip
                 warn "{ClinIndex} Running bgzip\n";
-                `cat bgList | parallel -j+3`;
+                `cat bgList | parallel -j+4`;
         }
         
         # make tabix files of all bgzip files
@@ -117,6 +118,7 @@ if ($parallel) {
                         "tabix -s1 -b4 -e5 Updated.ref_GRCh37.gff3.gz",
                         "tabix -s1 -b2 -e2 Updated.00-All.vcf.gz",
                         "tabix -s1 -b2 -e2 clinvar_sig.vcf.gz",
+                        "tabix Homo_sapiens.gtf.gz",
                 );
                 
                 foreach ( @tabixs ){
@@ -132,6 +134,7 @@ if ($parallel) {
         `mv Updated.ref_GRCh37.gff3* ref_GRCh37.gff3 ../data/GFF/`;
         `mv clinvar_sig.vcf* ../data/ClinVar/`;
         `rm bgList gunsList tabList wgetList 01humanid gene_info clinvar_sigfile.vcf`;
+        `mv Homo_sapiens.* ../data/GTF/`;
 
         $wgetFH->close;
         $gunsFH->close;

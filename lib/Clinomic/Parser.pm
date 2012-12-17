@@ -76,7 +76,7 @@ sub gvfParser {
     # extract out pragmas and store them in object;
     $self->_pragmas;
     
-    my ( @return_list );
+    my ( @return_list, @seqWarn );
     foreach my $lines( @{$feature_line} ) {
         chomp $lines;
         
@@ -84,6 +84,8 @@ sub gvfParser {
         my @attributes_list = split(/\;/, $attribute) if $attribute;
 
         next if ! $seq_id;
+        unless ($seq_id =~ /^chr|(\d+)/) { push @seqWarn, $seq_id; next; }
+        $seq_id =~ s/^chr(\d+|X|Y)/$1/g;
         
         my %atts;
         foreach my $attributes (@attributes_list) {
@@ -91,7 +93,7 @@ sub gvfParser {
             $atts{$1} = $2;
         }
         my $value = $self->_variant_builder(\%atts);
-        
+
         my $feature = {
             seqid  => $seq_id,
             source => $source,
@@ -105,6 +107,9 @@ sub gvfParser {
             },
         };
         push @return_list, $feature;
+    }
+    if (scalar @seqWarn > 1 ) {
+        die "One or more seqid did not start with chr# or #. Clinomic requires this.\n";
     }
     return \@return_list;
 }

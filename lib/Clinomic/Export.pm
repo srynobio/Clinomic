@@ -3,6 +3,8 @@ use Moose::Role;
 use IO::File;
 use File::Basename;
 use XML::Twig;
+#use XML::Writer;
+use XML::Generator;
 
 with 'MooseX::Getopt';
 
@@ -22,6 +24,101 @@ has 'xmlTemp' => (
 
 #-----------------------------------------------------------------------------
 #------------------------------- Methods -------------------------------------
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+#########
+use Data::Dumper;
+
+sub xmltest {
+    my ($self, $data) = @_;
+        
+    my $xmlFH = IO::File->new("output.xml", 'a+');    
+    my $X = XML::Generator->new(':pretty');
+
+    my @list;
+    foreach my $i ( @{$data} ) {
+        chomp $i;
+        
+        my $test = $X->feature(
+            $X->seqid ( $i->{seqid} ),
+            $X->source( $i->{source} ),
+            $X->type  ( $i->{type} ),
+            $X->start ( $i->{start} ),
+            $X->end   ( $i->{end} ),
+            $X->score ( $i->{score} ),
+            $X->strand( $i->{strand} ),
+
+            # attribute xml elements
+            $X->id         ( $i->{attribute}->{ID} ),
+            $X->alias      ( $i->{attirbute}->{Alias} ),
+            $X->dbxref     ( $i->{attribute}->{Dbxref} ),
+            $X->variant_seq( $i->{attribute}->{Variant_seq} ),
+            $X->reference_seq ( $i->{attribute}->{Reference_seq} ),
+            $X->variant_reads ( $i->{attribute}->{Variant_reads} ),
+            $X->total_reads   ( $i->{attribute}->{total_reads} ),
+            $X->zygosity      ( $i->{attribute}->{zygosity} ),
+            $X->variant_freq  ( $i->{attribute}->{variant_freq} ),
+            $X->variant_effect ( $self->variant23( $i, $X) ),
+            $X->start_range   ( $i->{attribute}->{start_range} ),
+            $X->end_range     ( $i->{attribute}->{end_range} ),
+            $X->phased        ( $i->{attribute}->{phased} ),
+            $X->genotype      ( $i->{attribute}->{genotype} ),
+            $X->individual       ( $i->{attribute}->{individual} ),
+            $X->variant_codon    ( $i->{attribute}->{variant_codon} ),
+            $X->reference_codon  ( $i->{attribute}->{reference_codon} ),
+            $X->variant_aa       ( $i->{attribute}->{variant_aa} ),
+            $X->reference_aa     ( $i->{attribute}->{reference_aa} ),
+            $X->breakpoint_detail( $i->{attribute}->{breakpoint_detail} ),
+            $X->sequence_context ( $i->{attribute}->{sequence_contex} ),
+            
+            # Clin terms
+            $X->clin_gene             ( $i->{attribute}->{clin}->{clin_gene} ),
+            $X->clin_genomic_reference( $i->{attribute}->{clin}->{clin_genomic_reference} ),
+            $X->clin_transcript       ( $i->{attribute}->{clin}->{clin_transcript} ),
+            $X->clin_allele_name      ( $i->{attribute}->{clin}->{clin_allele_name} ),
+            $X->clin_variant_id       ( $i->{attribute}->{clin}->{clin_variant_id} ),
+            $X->clin_HGVS_DNA         ( $i->{attribute}->{clin}->{clin_HGVS_DNA} ),
+            $X->clin_variant_type     ( $i->{attribute}->{clin}->{clin_variant_type} ),
+            $X->clin_HGVS_protein     ( $i->{attribute}->{clin}->{clin_HGVS_protein} ),
+            $X->clin_aa_change_type   ( $i->{attribute}->{clin}->{clin_aa_change_type} ),
+            $X->clin_DNA_region       ( $i->{attribute}->{clin}->{clin_DNA_region} ),
+            $X->clin_allelic_state    ( $i->{attribute}->{clin}->{clin_allelic_state} ),
+            $X->clin_variant_display_name     ( $i->{attribute}->{clin}->{clin_variant_display_name} ),
+            $X->clin_disease_variant_interpret( $i->{attribute}->{clin}->{clin_disease_variant_interpret} ),
+            $X->clin_drug_metabolism_interpret( $i->{attribute}->{clin}->{clin_drug_metabolism_interpret} ),
+            $X->clin_drug_efficacy_interpret  ( $i->{attribute}->{clin}->{clin_drug_efficacy_interpret} ),            
+
+        );
+        push @list, $test;
+    }
+    print $X->GVFClin(@list);
+    
+   
+}
+
+#-----------------------------------------------------------------------------
+
+sub variant23 {
+    my ($self, $eff, $X) = @_;
+     
+    my $effect = $eff->{attribute}->{Variant_effect};
+
+    my @varList;
+    foreach my $xml ( @{$effect} ){
+
+        my $id      = $X->feature_id($xml->{feature_id});
+        my $index   = $X->index($xml->{index});
+        my $seq_var = $X->sequence_variant($xml->{sequence_variant});
+        my $type    = $X->feature_type($xml->{feature_type});
+        
+        push @varList, $id, $index, $seq_var, $type;
+    }
+    return @varList;
+}
+
+
+
 #-----------------------------------------------------------------------------
 
 sub exporter {
@@ -90,7 +187,7 @@ sub _toGVF {
     foreach my $i ( @{$gvf} ){
 
         my $first8 =
-        "$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t" .
+        "chr$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t" .
         "$i->{'start'}\t$i->{'end'}\t$i->{'score'}\t$i->{'strand'}\t.";
         
         print $outFH "$first8\t";
@@ -107,10 +204,11 @@ sub _toGVF {
                 
                 my $line;
                 foreach (@{$v2}){
-                    my $fields = join(' ', $_->{'sequence_variant'}, $_->{'index'}, $_->{'feature_type'}, $_->{'feature_id1'});
+                    #my $fields = join(' ', $_->{'sequence_variant'}, $_->{'index'}, $_->{'feature_type'}, $_->{'feature_id1'});
+                    my $fields = join(' ', $_->{'sequence_variant'}, $_->{'index'}, $_->{'feature_type'}, $_->{'feature_id'});
                     
                     # add this if it's around
-                    $fields .= $_->{'feature_id2'} if $_->{'feature_id2'};
+                    #$fields .= $_->{'feature_id2'} if $_->{'feature_id2'};
                     
                     # create one line seperated by comma.
                     $line .= $fields;
@@ -353,8 +451,7 @@ sub _variantTwig {
         $_->insert_new_elt("sequence_variant_$ct", $f->{'sequence_variant'}),
         $_->insert_new_elt("index_$ct", $f->{'index'}),
         $_->insert_new_elt("feature_type_$ct", $f->{'feature_type'}),
-        $_->insert_new_elt("feature_id1_$ct", $f->{'feature_id1'}),
-        $_->insert_new_elt("feature_id2_$ct", $f->{'feature_id2'}),
+        $_->insert_new_elt("feature_id", $f->{'feature_id'}),
         $ct++;
     }   
 }

@@ -18,14 +18,16 @@ sub _variant_builder {
     
             my @effectList;
             foreach (@effect) {
-                my ($sv, $index, $ft, $fID1, $fID2) = split /\s/, $_;    
+                #my ($sv, $index, $ft, $fID1, $fID2) = split /\s/, $_;    
+                my ($sv, $index, $ft, $id) = split /\s/, $_;    
         
                 my $effect = {
                     sequence_variant => $sv,
                     index            => $index,
                     feature_type     => $ft,
-                    feature_id1      => $fID1,
-                    feature_id2      => $fID2,
+                    #feature_id1      => $fID1,
+                    #feature_id2      => $fID2,
+                    feature_id       => $id,
                 };
                 push @effectList, $effect;
             }

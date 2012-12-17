@@ -29,7 +29,7 @@ has 'file' => (
     reader   => 'get_file',
     writer   => 'set_file',
     required => 1,
-    documentation => q(REQUIRED.  Path to the GVF file you want to convert to GVFClin.
+    documentation => q(REQUIRED.  Path to the GVF file you want to convert to Clinical document.
     )
 );
 
@@ -101,7 +101,7 @@ has 'tag_switch' => (
         termExist => 'exists',
         access    => 'accessor',
     },
-    documentation => q(Allows change in feature attribute tag.  Example: disease -> Clin_disease_interpret.
+    documentation => q(Change user attribute tag to a Clin accepted tag.  Example: disease -> Clin_disease_interpret.
     ),
 );
 
@@ -114,7 +114,7 @@ has 'export' => (
     )
 );
 
-has 'ref_update' =>(
+has 'revise_ref' => (
     is        => 'rw',
     isa       => 'Bool',
     predicate => 'updateRef',
@@ -144,16 +144,15 @@ sub gvfRelationBuild {
     my $stp5 = $self->allelicStateCheck($stp4);
     warn "{Clinomic} Checking for hgvs DNA matches.\n";
     my $stp6 = $self->hgvsDNACheck($stp5);
+    warn "{Clinomic} Checking for region information.\n";
+    my $stp7 = $self->regionFinder($stp6);
     
-    #warn "{Clinomic} Checking for region information.\n";
-    #my $stp7 = $self->regionFinder($stp6);
-
 =cut
     warn "Checking for hgvs protein matches.\n";
     #my $stp7 = $self->hgvsProtCheck($stp6);
 =cut
 
-    return $stp6;
+    return $stp7;
 }
 
 #-----------------------------------------------------------------------------
@@ -165,6 +164,7 @@ sub gvfValadate {
     my $db = Bio::DB::Fasta->new( $self->get_fasta, -debug=>1 ) || die "Fasta file not found $@\n";
     
     my ( $correct, $mismatch, $total);
+    my @report;
     my $noRef = 0;
     foreach my $i ( @{$data} ) {
     
@@ -186,7 +186,8 @@ sub gvfValadate {
         if ( $dataRef eq '-'){ $noRef++; next; }
 
         # check that the strand matches.
-        my $strand  = $i->{'strand'};
+        #ccmy $strand  = $i->{'strand'};
+        my $strand  = ( defined ($i->{'strand'}) ? $i->{'strand'} : 'NULL' );
         if ( $strand eq '-' ) { tr/ACGT/TGCA/ }
         
         # call to Bio::DB. 
@@ -198,6 +199,10 @@ sub gvfValadate {
         }
         else {
             $mismatch++;
+            # if ref does not match collect it and add to report 
+            my $result = "$chr\t$start\t$end\tFasta_Seq: $bioSeq\tFile_Seq: $dataRef\n";
+            push @report, $result;
+            
             # if user wants to update ref to current fasta build this is where it happens.
             if ( $self->updateRef ) {
                 $i->{'attribute'}->{'Reference_seq'} = $bioSeq;
@@ -205,7 +210,21 @@ sub gvfValadate {
             }
         }
     }
-
+    
+    ## print out report of incorect reference seq.
+    if ( scalar @report > 1 ){
+        my ($file, $path) = fileparse( $self->get_file );
+        $file =~ s/(\S+).gvf/$1.report/g;
+        
+        my $reportFH  = IO::File->new($file, 'a+') || die "canto file\n";
+        
+        print $reportFH "## Unmatched Reference for $file ##\n";
+        foreach (@report){
+            chomp $_;
+            print $reportFH "$_\n";
+        }
+    }
+    
     # check if passes default/given value.
     if ( $mismatch == $total ) { die "No matches were found, possible no Reference_seq in file\n";}
     my $value = ($correct/($total-$noRef)) * 100;
@@ -229,7 +248,7 @@ sub gvfGeneFind {
 
     # create tabix object
     my $tab = Tabix->new(-data => $self->get_gff) || die "Cannot locate GFF Tabix file\n";
-
+    
     # search the golden set file for a match
     my @updateGVF;
     foreach my $i (@{$data}) {
@@ -251,7 +270,7 @@ sub gvfGeneFind {
             
             my $start = $i->{'start'};
             my $end   = $i->{'end'};
-
+            
             # check the tabix file for matching regions
             my $iter = $tab->query($chr, $start - 1, $end + 1);
 
@@ -314,9 +333,11 @@ sub gvfRefBuild {
             }
             else { next }
         }
+        unless ($gene) { next }
         
         # search the db for matching gene names, and add all clin data
         # to working gvf file
+
         if ( $refInfo->{$gene} ){
             my $clin = {
                 Clin_gene              => $gene,
