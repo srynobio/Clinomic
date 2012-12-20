@@ -16,214 +16,214 @@
                             <templateId root="2.16.840.1.113883.10.20.20.1.9.1"/>
                             <code code="35511-5" codeSystem="2.16.840.1.113883.6.1" codeSystemName="LOINC" displayName="Background information"/>
                              <title>Pragmas describing background information</title>
-                            <simple_pragma>
-                                <gvf-version>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/gvf_version"/>
-                                </gvf-version>
+                             <simple_pragmas>
+                                <gvf_version>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/gvf_version"/>
+                                </gvf_version>
                                 <reference-fasta>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/reference_fasta"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/reference_fasta"/>
                                 </reference-fasta>
                                 <feature-gff3>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/feature_gff3"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/feature_gff3"/>
                                 </feature-gff3>
                                 <file-version>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/file_version"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/file_version"/>
                                 </file-version>
                                 <file-date>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/file_date"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/file_date"/>
                                 </file-date>
                                 <individual-id>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/individual_id"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/individual_id"/>
                                 </individual-id>
                                 <population>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/population"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/population"/>
                                 </population>
                                 <sex>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/sex"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/sex"/>
                                 </sex>
                                 <technology-platform-class>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_class"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_class"/>
                                 </technology-platform-class>
                                 <technology-platform-name>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_name"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_name"/>
                                 </technology-platform-name>
                                 <technology-platform-version>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_version"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_version"/>
                                 </technology-platform-version>
                                 <technology-platform-machine-id>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_machine_id"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_machine_id"/>
                                 </technology-platform-machine-id>
                                 <technology-platform-read-length>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_read_length"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_read_length"/>
                                 </technology-platform-read-length>
                                 <technology-platform-read-type>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_read_type"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_read_type"/>
                                 </technology-platform-read-type>
                                 <technology-platform-read-pair-span>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_read_pair_span"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_read_pair_span"/>
                                 </technology-platform-read-pair-span>
                                 <technology-platform-average-coverage>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/technology_platform_average_coverage"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/technology_platform_average_coverage"/>
                                 </technology-platform-average-coverage>
                                 <sequencing-scope>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/sequencing_scope"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/sequencing_scope"/>
                                 </sequencing-scope>
                                 <capture-regions>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/capture_regions"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/capture_regions"/>
                                 </capture-regions>
                                 <sequence-alignment>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/sequence_alignment"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/sequence_alignment"/>
                                 </sequence-alignment>
                                 <variant-calling>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/variant_calling"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/variant_calling"/>
                                 </variant-calling>
                                 <sample-description>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/sample_description"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/sample_description"/>
                                 </sample-description>
                                 <genomic-source>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/genomic_source"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/genomic_source"/>
                                 </genomic-source>
                                 <multi-individual>
-                                    <xsl:value-of select="/GVFClin/simple_pragmas/multi_individual"/>
+                                    <xsl:value-of select="/GVFClin/pragma/simple_pragmas/multi_individual"/>
                                 </multi-individual>
-                            </simple_pragma>
-                            <structured-pragmas>
+                            </simple_pragmas>
+                             <structured-pragmas>
                                 <technology-platform>
                                     <average_coverage>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/average_coverage"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/average_coverage"/>
                                     </average_coverage>
                                     <read_pair_span>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/read_pair_span"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/read_pair_span"/>
                                     </read_pair_span>
                                     <read_type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/read_type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/read_type"/>
                                     </read_type>
                                     <read_length>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/read_length"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/read_length"/>
                                     </read_length>
                                     <platform_name>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/platform_name"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/platform_name"/>
                                     </platform_name>
                                     <platform_class>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/platform_class"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/platform_class"/>
                                     </platform_class>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/comment"/>
                                     </comment>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/dbxref"/>
                                     </dbxref>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/type"/>
                                     </type>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/technology_platform/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/technology_platform/source"/>
                                     </source>
                                     <seqid></seqid>
                                 </technology-platform>
                                 <data-source>
                                     <data_type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/data_source/data_type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/data_source/data_type"/>
                                     </data_type>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/data_source/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/data_source/comment"/>
                                     </comment>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/data_source/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/data_source/dbxref"/>
                                     </dbxref>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/data_source/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/data_source/type"/>
                                     </type>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/data_source/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/data_source/source"/>
                                     </source>
                                     <seqid>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/data_source/seqid"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/data_source/seqid"/>
                                     </seqid>
                                 </data-source>
                                 <score-method>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/score_method/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/score_method/comment"/>
                                     </comment>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/score_method/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/score_method/dbxref"/>
                                     </dbxref>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/score_method/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/score_method/type"/>
                                     </type>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/score_method/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/score_method/source"/>
                                     </source>
                                     <seqid>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/score_method/seqid"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/score_method/seqid"/>
                                     </seqid>
                                 </score-method>
                                 <source-method>
                                     <seqid>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/source_method/seqid"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/source_method/seqid"/>
                                     </seqid>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/source_method/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/source_method/source"/>
                                     </source>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/source_method/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/source_method/type"/>
                                     </type>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/source_method/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/source_method/dbxref"/>
                                     </dbxref>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/source_method/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/source_method/comment"/>
                                     </comment>
                                 </source-method>
                                 <attribute-method>
                                     <seqid>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/attribute_method/seqid"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/attribute_method/seqid"/>
                                     </seqid>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/attribute_method/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/attribute_method/source"/>
                                     </source>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/attribute_method/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/attribute_method/type"/>
                                     </type>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/attribute_method/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/attribute_method/dbxref"/>
                                     </dbxref>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/attribute_method/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/attribute_method/comment"/>
                                     </comment>
                                 </attribute-method>
                                 <phenotype-description>
                                     <seqid>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phenotype_description/seqid"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phenotype_description/seqid"/>
                                     </seqid>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phenotype_description/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phenotype_description/source"/>
                                     </source>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phenotype_description/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phenotype_description/type"/>
                                     </type>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phenotype_description/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phenotype_description/dbxref"/>
                                     </dbxref>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phenotype_description/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phenotype_description/comment"/>
                                     </comment>
                                 </phenotype-description>
                                 <phased-genotypes>
                                     <seqid>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phased_genotypes/seqid"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phased_genotypes/seqid"/>
                                     </seqid>
                                     <source>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phased_genotypes/source"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phased_genotypes/source"/>
                                     </source>
                                     <type>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phased_genotypes/type"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phased_genotypes/type"/>
                                     </type>
                                     <dbxref>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phased_genotypes/dbxref"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phased_genotypes/dbxref"/>
                                     </dbxref>
                                     <comment>
-                                        <xsl:value-of select="/GVFClin/structured_pragmas/phased_genotypes/comment"/>
+                                        <xsl:value-of select="/GVFClin/pragma/structured_pragmas/phased_genotypes/comment"/>
                                     </comment>
                                 </phased-genotypes>
                             </structured-pragmas>
@@ -243,18 +243,18 @@
                             <title>GVFClin Interpretation</title>
                             <genetic-analysis-summary-panel>
                                 <id>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic-analysis-summary-panel/id"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic-analysis-summary-panel/id"/>
                                 </id>
                                 <comment>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic-analysis-summary-panel/comment"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic-analysis-summary-panel/comment"/>
                                 </comment>
                                 <GAMP>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic-analysis-summary-panel/GAMP"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic-analysis-summary-panel/GAMP"/>
                                 </GAMP>
                             </genetic-analysis-summary-panel>
                             <genetic-analysis-discrete-sequence-variant-panel>
                                 <comment>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic_analysis_discrete_sequence_variant_panel/comment"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic_analysis_discrete_sequence_variant_panel/comment"/>
                                 </comment>
                             </genetic-analysis-discrete-sequence-variant-panel>
                         </section>
@@ -266,7 +266,7 @@
                             <title>Summary of the genetic analysis</title>
                             <genetic-analysis-discrete-report-panel>
                                 <comment>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic_analysis_discrete_report_panel/comment"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic_analysis_discrete_report_panel/comment"/>
                                 </comment>
                             </genetic-analysis-discrete-report-panel>
                         </section>
@@ -278,13 +278,13 @@
                             <title>Summary of test preformed</title>
                             <genetic-analysis-master-panel>
                                 <id>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic_analysis_master_panel/id"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic_analysis_master_panel/id"/>
                                 </id>
                                 <comment>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic_analysis_master_panel/comment"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic_analysis_master_panel/comment"/>
                                 </comment>
                                 <OBR>
-                                    <xsl:value-of select="/GVFClin/structured_pragmas/genetic_analysis_master_panel/OBR"/>
+                                    <xsl:value-of select="/GVFClin/pragma/structured_pragmas/genetic_analysis_master_panel/OBR"/>
                                 </OBR>
                             </genetic-analysis-master-panel>
                         </section>
@@ -334,7 +334,7 @@
                                       <xsl:value-of select="id"/>
                                   </id>
                                   <alias>
-                                      <xsl:value-of select="alias"/>
+                                      <xsl:value-of select="/GVFClin/feature/alias"/>
                                   </alias>
                                   <dbxref>
                                       <xsl:value-of select="dbxref"/>
@@ -358,51 +358,8 @@
                                       <xsl:value-of select="variant_freq"/>
                                   </variant_freq>
                                   <variant_effect>
-                                      <sequence_variant_1>
-                                          <xsl:value-of select="variant_effect/sequence_variant_1"/>
-                                      </sequence_variant_1>
-                                      <index_1>
-                                          <xsl:value-of select="variant_effect/index_1"/>
-                                      </index_1>
-                                      <feature_type_1>
-                                          <xsl:value-of select="variant_effect/feature_type_1"/>
-                                      </feature_type_1>
-                                      <feature_id1_1>
-                                          <xsl:value-of select="variant_effect/feature_id1_1"/>
-                                      </feature_id1_1>
-                                      <feature_id2_1>
-                                          <xsl:value-of select="variant_effect/feature_id2_1"/>
-                                      </feature_id2_1>
-                                      <sequence_variant_2>
-                                          <xsl:value-of select="variant_effect/sequence_variant_2"/>
-                                      </sequence_variant_2>
-                                      <index_2>
-                                          <xsl:value-of select="variant_effect/index_2"/>
-                                      </index_2>
-                                      <feature_type_2>
-                                          <xsl:value-of select="variant_effect/feature_type_2"/>
-                                      </feature_type_2>
-                                      <feature_id1_2>
-                                          <xsl:value-of select="variant_effect/feature_id1_2"/>
-                                      </feature_id1_2>
-                                      <feature_id2_2>
-                                          <xsl:value-of select="variant_effect/feature_id2_2"/>
-                                      </feature_id2_2>                      
-                                      <sequence_variant_3>
-                                          <xsl:value-of select="variant_effect/sequence_variant_3"/>
-                                      </sequence_variant_3>
-                                      <index_3>
-                                          <xsl:value-of select="variant_effect/index_3"/>
-                                      </index_3>
-                                      <feature_type_3>
-                                          <xsl:value-of select="variant_effect/feature_type_3"/>
-                                      </feature_type_3>
-                                      <feature_id1_3>
-                                          <xsl:value-of select="variant_effect/feature_id1_3"/>
-                                      </feature_id1_3>
-                                      <feature_id2_3>
-                                          <xsl:value-of select="variant_effect/feature_id2_3"/>
-                                      </feature_id2_3>
+                                      <!-- Working on this section -->
+                                      <xsl:value-of select="/GVFClin/feature/variant_effect"/>
                                   </variant_effect>
                                   <start_range>
                                       <xsl:value-of select="start_range"/>

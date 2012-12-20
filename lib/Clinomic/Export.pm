@@ -2,12 +2,11 @@ package Clinomic::Export;
 use Moose::Role;
 use IO::File;
 use File::Basename;
-use XML::Twig;
-#use XML::Writer;
 use XML::Generator;
 
-with 'MooseX::Getopt';
+use Data::Printer;
 
+with 'MooseX::Getopt';
 
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
@@ -26,101 +25,6 @@ has 'xmlTemp' => (
 #------------------------------- Methods -------------------------------------
 #-----------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
-#########
-use Data::Dumper;
-
-sub xmltest {
-    my ($self, $data) = @_;
-        
-    my $xmlFH = IO::File->new("output.xml", 'a+');    
-    my $X = XML::Generator->new(':pretty');
-
-    my @list;
-    foreach my $i ( @{$data} ) {
-        chomp $i;
-        
-        my $test = $X->feature(
-            $X->seqid ( $i->{seqid} ),
-            $X->source( $i->{source} ),
-            $X->type  ( $i->{type} ),
-            $X->start ( $i->{start} ),
-            $X->end   ( $i->{end} ),
-            $X->score ( $i->{score} ),
-            $X->strand( $i->{strand} ),
-
-            # attribute xml elements
-            $X->id         ( $i->{attribute}->{ID} ),
-            $X->alias      ( $i->{attirbute}->{Alias} ),
-            $X->dbxref     ( $i->{attribute}->{Dbxref} ),
-            $X->variant_seq( $i->{attribute}->{Variant_seq} ),
-            $X->reference_seq ( $i->{attribute}->{Reference_seq} ),
-            $X->variant_reads ( $i->{attribute}->{Variant_reads} ),
-            $X->total_reads   ( $i->{attribute}->{total_reads} ),
-            $X->zygosity      ( $i->{attribute}->{zygosity} ),
-            $X->variant_freq  ( $i->{attribute}->{variant_freq} ),
-            $X->variant_effect ( $self->variant23( $i, $X) ),
-            $X->start_range   ( $i->{attribute}->{start_range} ),
-            $X->end_range     ( $i->{attribute}->{end_range} ),
-            $X->phased        ( $i->{attribute}->{phased} ),
-            $X->genotype      ( $i->{attribute}->{genotype} ),
-            $X->individual       ( $i->{attribute}->{individual} ),
-            $X->variant_codon    ( $i->{attribute}->{variant_codon} ),
-            $X->reference_codon  ( $i->{attribute}->{reference_codon} ),
-            $X->variant_aa       ( $i->{attribute}->{variant_aa} ),
-            $X->reference_aa     ( $i->{attribute}->{reference_aa} ),
-            $X->breakpoint_detail( $i->{attribute}->{breakpoint_detail} ),
-            $X->sequence_context ( $i->{attribute}->{sequence_contex} ),
-            
-            # Clin terms
-            $X->clin_gene             ( $i->{attribute}->{clin}->{clin_gene} ),
-            $X->clin_genomic_reference( $i->{attribute}->{clin}->{clin_genomic_reference} ),
-            $X->clin_transcript       ( $i->{attribute}->{clin}->{clin_transcript} ),
-            $X->clin_allele_name      ( $i->{attribute}->{clin}->{clin_allele_name} ),
-            $X->clin_variant_id       ( $i->{attribute}->{clin}->{clin_variant_id} ),
-            $X->clin_HGVS_DNA         ( $i->{attribute}->{clin}->{clin_HGVS_DNA} ),
-            $X->clin_variant_type     ( $i->{attribute}->{clin}->{clin_variant_type} ),
-            $X->clin_HGVS_protein     ( $i->{attribute}->{clin}->{clin_HGVS_protein} ),
-            $X->clin_aa_change_type   ( $i->{attribute}->{clin}->{clin_aa_change_type} ),
-            $X->clin_DNA_region       ( $i->{attribute}->{clin}->{clin_DNA_region} ),
-            $X->clin_allelic_state    ( $i->{attribute}->{clin}->{clin_allelic_state} ),
-            $X->clin_variant_display_name     ( $i->{attribute}->{clin}->{clin_variant_display_name} ),
-            $X->clin_disease_variant_interpret( $i->{attribute}->{clin}->{clin_disease_variant_interpret} ),
-            $X->clin_drug_metabolism_interpret( $i->{attribute}->{clin}->{clin_drug_metabolism_interpret} ),
-            $X->clin_drug_efficacy_interpret  ( $i->{attribute}->{clin}->{clin_drug_efficacy_interpret} ),            
-
-        );
-        push @list, $test;
-    }
-    print $X->GVFClin(@list);
-    
-   
-}
-
-#-----------------------------------------------------------------------------
-
-sub variant23 {
-    my ($self, $eff, $X) = @_;
-     
-    my $effect = $eff->{attribute}->{Variant_effect};
-
-    my @varList;
-    foreach my $xml ( @{$effect} ){
-
-        my $id      = $X->feature_id($xml->{feature_id});
-        my $index   = $X->index($xml->{index});
-        my $seq_var = $X->sequence_variant($xml->{sequence_variant});
-        my $type    = $X->feature_type($xml->{feature_type});
-        
-        push @varList, $id, $index, $seq_var, $type;
-    }
-    return @varList;
-}
-
-
-
-#-----------------------------------------------------------------------------
-
 sub exporter {
     my ($self, $gvf) = @_;
     
@@ -132,28 +36,25 @@ sub exporter {
     }
     elsif ($type eq 'xml'){
         warn "{Clinomic} Building XML.\n";
-        $self->_toXML($gvf);
+        $self->gvf2XML($gvf);
         $self->_completeXML;
     }
     elsif ($type eq 'hl7'){
         warn "{Clinomic} Building HL7-XML file.\n";
-        $self->_toXML($gvf);
+        $self->gvf2XML($gvf);
         $self->_completeXML;
         $self->_toGTR($gvf);
     }
     elsif( $type eq 'all'){
         warn "{Clinomic} Building all output files.\n";
         $self->_toGVF($gvf);
-        $self->_toXML($gvf);
+        $self->gvf2XML($gvf);
         $self->_completeXML;
         $self->_toGTR($gvf);
     }
 }
 
 #-----------------------------------------------------------------------------
-
-### maybe add ##reference-fasta, ##feature-gff3, ##file-date 
-
 
 sub _toGVF {
     my ($self, $gvf) = @_;
@@ -204,11 +105,8 @@ sub _toGVF {
                 
                 my $line;
                 foreach (@{$v2}){
-                    #my $fields = join(' ', $_->{'sequence_variant'}, $_->{'index'}, $_->{'feature_type'}, $_->{'feature_id1'});
-                    my $fields = join(' ', $_->{'sequence_variant'}, $_->{'index'}, $_->{'feature_type'}, $_->{'feature_id'});
                     
-                    # add this if it's around
-                    #$fields .= $_->{'feature_id2'} if $_->{'feature_id2'};
+                    my $fields = join(' ', $_->{'sequence_variant'}, $_->{'index'}, $_->{'feature_type'}, $_->{'feature_id'});
                     
                     # create one line seperated by comma.
                     $line .= $fields;
@@ -229,231 +127,190 @@ sub _toGVF {
 
 #-----------------------------------------------------------------------------
 
-sub _toXML {
-    
-    # Im guessing, forever from this day I will regret the day I
-    # ever knew XML::Twig existed.
-    my ($self, $gvf) = @_;
-    my $fh = IO::File->new('temp.xml', 'a+');
+sub gvf2XML {
+    my ($self, $data) = @_;
 
-    if ( keys %{$self->get_pragmas} ){
-        my $spTwig = $self->_simplePragmaXML($gvf, $fh);
-        my $stTwig = $self->_structPragmaXML($gvf, $fh);
-    }
-    my $featTwig = $self->_featureXML($gvf, $fh);
-    $fh->close;
-}
+    # get pragma data and make IO file
+    my $pragmaData = $self->get_pragmas;
+    my $xmlFH = IO::File->new("temp.xml", 'a+');       
 
-#-----------------------------------------------------------------------------
+    # make XML::Generator object
+    my $X = XML::Generator->new(':pretty');
 
-sub _simplePragmaXML {
-    my ($self, $gvf, $fh) = @_;
-
-    # get pragma data.    
-    my $p = $self->get_pragmas;
-    
-    #parse the gvf data to xml
-    my $twig = XML::Twig->new(
-        pretty_print  => 'indented',
-        twig_roots    => { simple_pragmas => 1 },
-        twig_handlers => {
-            gvf_version                          => sub {$_->set_text($p->{'gvf_version'}[0])},
-            reference_fasta                      => sub {$_->set_text($p->{'reference_version'}[0])},
-            feature_gff3                         => sub {$_->set_text($p->{'feature_gff3'}[0])},
-            file_version                         => sub {$_->set_text($p->{'file_version'}[0])},
-            file_date                            => sub {$_->set_text($p->{'file_date'}[0])},
-            individual_id                        => sub {$_->set_text($p->{'individual_id'}[0])},
-            population                           => sub {$_->set_text($p->{'population'}[0])},
-            sex                                  => sub {$_->set_text($p->{'sex'}[0])},
-            technology_platform_class            => sub {$_->set_text($p->{'technology_platform_class'}[0])},
-            technology_platform_name             => sub {$_->set_text($p->{'technology_platform_name'}[0])},
-            technology_platform_version          => sub {$_->set_text($p->{'technology_platform_version'}[0])},
-            technology_platform_machine_id       => sub {$_->set_text($p->{'technology_platform_machine_id'}[0])},
-            technology_platform_read_length      => sub {$_->set_text($p->{'technology_platform_read_length'}[0])},
-            technology_platform_read_type        => sub {$_->set_text($p->{'technology_platform_read_type'}[0])},
-            technology_platform_read_pair_span   => sub {$_->set_text($p->{'technology_platform_read_pair_span'}[0])},
-            technology_platform_average_coverage => sub {$_->set_text($p->{'technology_platform_average_coverage'}[0])},
-            sequencing_scope                     => sub {$_->set_text($p->{'sequencing_scope'}[0])},
-            capture_regions                      => sub {$_->set_text($p->{'capture_regions'}[0])},
-            sequence_alignment                   => sub {$_->set_text($p->{'sequence_alignment'}[0])},
-            variant_calling                      => sub {$_->set_text($p->{'variant_calling'}[0])},
-            variant_calling                      => sub {$_->set_text($p->{'variant_calling'}[0])},
-            genomic_source                       => sub {$_->set_text($p->{'genomic_source'}[0])},
-            multi_individual                     => sub {$_->set_text($p->{'multi_individual'}[0])},
-        },
+    # simple pragmas
+    my $simplePragma = $X->simple_pragmas(
+        $X->gvf_version($pragmaData->{gvf_version}[0]),
+        $X->reference_fasta ($pragmaData->{reference_fasta}[0]),
+        $X->feature_gff3    ($pragmaData->{feature_gff3}[0]),
+        $X->file_version    ($pragmaData->{file_version}[0]),
+        $X->file_date       ($pragmaData->{file_date}[0]),
+        $X->individual_id   ($pragmaData->{individual_id}[0]),
+        $X->population      ($pragmaData->{population}[0]),
+        $X->sex             ($pragmaData->{sex}[0]),
+        $X->technology_platform_class            ($pragmaData->{technology_platform_class}[0]),
+        $X->technology_platform_name             ($pragmaData->{technology_platform_name}[0]),
+        $X->technology_platform_version          ($pragmaData->{technology_platform_version}[0]),
+        $X->technology_platform_machine_id       ($pragmaData->{technology_platform_machine_id}[0]),
+        $X->technology_platform_read_length      ($pragmaData->{technology_platform_read_length}[0]),
+        $X->technology_platform_read_type        ($pragmaData->{technology_platform_read_type}[0]),
+        $X->technology_platform_read_pair_span   ($pragmaData->{technology_platform_read_pair_span}[0]),
+        $X->technology_platform_average_coverage ($pragmaData->{technology_platform_average_coverage}[0]),
+        $X->sequencing_scope   ($pragmaData->{sequencing_scope}[0]),
+        $X->capture_regions    ($pragmaData->{capture_regions}[0]),
+        $X->sequence_alignment ($pragmaData->{sequence_alignment}[0]),
+        $X->variant_calling    ($pragmaData->{variant_calling}[0]),
+        $X->genomic_source     ($pragmaData->{genomic_source}[0]),
+        $X->multi_individual   ($pragmaData->{multi_individual}[0]),
     );
-    $twig->parsefile($self->get_xmlTemp);
-    $twig->flush($fh);
-}
-
-#-----------------------------------------------------------------------------
-
-sub _structPragmaXML {
-    my ($self, $gvf, $fh) = @_;
     
-    # get pragma data.    
-    my $p = $self->get_pragmas;
-    
-    # parse the pragma data to xml insert_new_elt will create a new
-    # element for each child term regardless if value exists.
-    my $twig = XML::Twig->new(
-        pretty_print  => 'indented',
-        twig_roots    => { structured_pragmas => 1 },
-        twig_handlers => {
-            technology_platform => sub {
-                $_->insert_new_elt('seqid', $p->{'technology_platform'}[0]->{'Seqid'}),
-                $_->insert_new_elt('source', $p->{'technology_platform'}[0]->{'Source'}),
-                $_->insert_new_elt('type', $p->{'technology_platform'}[0]->{'Type'}),
-                $_->insert_new_elt('dbxref', $p->{'technology_platform'}[0]->{'Dbxref'}),
-                $_->insert_new_elt('comment', $p->{'technology_platform'}[0]->{'Comment'}),
-                $_->insert_new_elt('platform_class', $p->{'technology_platform'}[0]->{'Platform_class'}),
-                $_->insert_new_elt('platform_name', $p->{'technology_platform'}[0]->{'Platform_name'}),
-                $_->insert_new_elt('read_length', $p->{'technology_platform'}[0]->{'Read_length'}),
-                $_->insert_new_elt('read_type', $p->{'technology_platform'}[0]->{'Read_type'}),
-                $_->insert_new_elt('read_pair_span', $p->{'technology_platform'}[0]->{'Read_pair_span'}),
-                $_->insert_new_elt('average_coverage', $p->{'technology_platform'}[0]->{'Average_coverage'}),
-            },
-            data_source => sub {
-                $_->insert_new_elt('seqid', $p->{'data_source'}[0]->{'Seqid'}),
-                $_->insert_new_elt('source', $p->{'data_source'}[0]->{'Source'}),
-                $_->insert_new_elt('type', $p->{'data_source'}[0]->{'Type'}),
-                $_->insert_new_elt('dbxref', $p->{'data_source'}[0]->{'Dbxref'}),
-                $_->insert_new_elt('comment', $p->{'data_source'}[0]->{'Comment'}),
-                $_->insert_new_elt('data_type', $p->{'data_source'}[0]->{'Data_type'}),
-            },
-            score_method => sub {
-                $_->insert_new_elt('seqid', $p->{'score_method'}[0]->{'Seqid'}),
-                $_->insert_new_elt('source', $p->{'score_method'}[0]->{'Source'}),
-                $_->insert_new_elt('type', $p->{'score_method'}[0]->{'Type'}),
-                $_->insert_new_elt('dbxref', $p->{'score_method'}[0]->{'Dbxref'}),
-                $_->insert_new_elt('comment', $p->{'score_method'}[0]->{'Comment'}),
-            },
-            attribute_method => sub {
-                $_->insert_new_elt('seqid', $p->{'attribute_method'}[0]->{'Seqid'}),
-                $_->insert_new_elt('source', $p->{'attribute_method'}[0]->{'Source'}),
-                $_->insert_new_elt('type', $p->{'attribute_method'}[0]->{'Type'}),
-                $_->insert_new_elt('dbxref', $p->{'attribute_method'}[0]->{'Dbxref'}),
-                $_->insert_new_elt('comment', $p->{'attribute_method'}[0]->{'Comment'}),
-            },
-            phenotype_description => sub {
-                $_->insert_new_elt('seqid', $p->{'phenotype_description'}[0]->{'Seqid'}),
-                $_->insert_new_elt('source', $p->{'phenotype_description'}[0]->{'Source'}),
-                $_->insert_new_elt('type', $p->{'phenotype_description'}[0]->{'Type'}),
-                $_->insert_new_elt('dbxref', $p->{'phenotype_description'}[0]->{'Dbxref'}),
-                $_->insert_new_elt('comment', $p->{'phenotype_description'}[0]->{'Comment'}),                
-            },
-            phased_genotypes => sub {
-                $_->insert_new_elt('seqid', $p->{'phased_genotypes'}[0]->{'Seqid'}),
-                $_->insert_new_elt('source', $p->{'phased_genotypes'}[0]->{'Source'}),
-                $_->insert_new_elt('type', $p->{'phased_genotypes'}[0]->{'Type'}),
-                $_->insert_new_elt('dbxref', $p->{'phased_genotypes'}[0]->{'Dbxref'}),
-                $_->insert_new_elt('comment', $p->{'phased_genotypes'}[0]->{'Comment'}),                                
-            },
-            # start of the GVFClin terms
-            genetic_analysis_master_panel => sub {
-                $_->insert_new_elt('id', $p->{'genetic_analysis_master_panel'}[0]->{'ID'}),
-                $_->insert_new_elt('comment', $p->{'genetic_analysis_master_panel'}[0]->{'Comment'}),
-                $_->insert_new_elt('obr', $p->{'genetic_analysis_master_panel'}[0]->{'OBR'}),
-            },
-            genetic_analysis_summary_panel => sub {
-                $_->insert_new_elt('id', $p->{'genetic_analysis_summary_panel'}[0]->{'ID'}),
-                $_->insert_new_elt('comment', $p->{'genetic_analysis_summary_panel'}[0]->{'Comment'}),
-                $_->insert_new_elt('gamp', $p->{'genetic_analysis_summary_panel'}[0]->{'GAMP'}),
-            },
-            genetic_analysis_discrete_report_panel => sub {
-                $_->insert_new_elt('comment', $p->{'genetic_analysis_discrete_report_panel'}[0]->{'Comment'}),
-            },
-            genetic_analysis_discrete_sequence_variant_panel => sub {
-                $_->insert_new_elt('comment', $p->{'genetic_analysis_discrete_sequence_variant_panel'}[0]->{'Comment'}),
-            },
-        },
+    # structured pragmas
+    my $structPragma = $X->structured_pragmas(
+        $X->technology_platform(
+                $X->seqid   ($pragmaData->{technology_platform}[0]->{Seqid}),
+                $X->source  ($pragmaData->{technology_platform}[0]->{Source}),
+                $X->type    ($pragmaData->{technology_platform}[0]->{Type}),
+                $X->dbxref  ($pragmaData->{technology_platform}[0]->{Dbxref}),
+                $X->comment ($pragmaData->{technology_platform}[0]->{Comment}),
+                $X->platform_class  ($pragmaData->{technology_platform}[0]->{Platform_class}),
+                $X->platform_name   ($pragmaData->{technology_platform}[0]->{Platform_name}),
+                $X->read_length     ($pragmaData->{technology_platform}[0]->{Read_length}),
+                $X->read_type       ($pragmaData->{technology_platform}[0]->{Read_type}),
+                $X->read_pair_span  ($pragmaData->{technology_platform}[0]->{Read_pair_span}),
+                $X->average_coverage($pragmaData->{technology_platform}[0]->{Average_coverage}),
+        ),
+        $X->data_source(
+                $X->seqid    ($pragmaData->{data_source}[0]->{Seqid}),
+                $X->source   ($pragmaData->{data_source}[0]->{Source}),
+                $X->type     ($pragmaData->{data_source}[0]->{Type}),
+                $X->dbxref   ($pragmaData->{data_source}[0]->{Dbxref}),
+                $X->comment  ($pragmaData->{data_source}[0]->{Comment}),
+                $X->data_type($pragmaData->{data_source}[0]->{Data_type}),
+        ),
+        $X->score_method(
+                $X->seqid    ($pragmaData->{score_method}[0]->{Seqid}),
+                $X->source   ($pragmaData->{score_method}[0]->{Source}),
+                $X->type     ($pragmaData->{score_method}[0]->{Type}),
+                $X->dbxref   ($pragmaData->{score_method}[0]->{Dbxref}),
+                $X->comment  ($pragmaData->{score_method}[0]->{Comment}),
+        ),
+        $X->attribute_method(
+                $X->seqid    ($pragmaData->{attribute_method}[0]->{Seqid}),
+                $X->source   ($pragmaData->{attribute_method}[0]->{Source}),
+                $X->type     ($pragmaData->{attribute_method}[0]->{Type}),
+                $X->dbxref   ($pragmaData->{attribute_method}[0]->{Dbxref}),
+                $X->comment  ($pragmaData->{attribute_method}[0]->{Comment}),
+        ),            
+        $X->phenotype_description(
+                $X->seqid    ($pragmaData->{phenotype_description}[0]->{Seqid}),
+                $X->source   ($pragmaData->{phenotype_description}[0]->{Source}),
+                $X->type     ($pragmaData->{phenotype_description}[0]->{Type}),
+                $X->dbxref   ($pragmaData->{phenotype_description}[0]->{Dbxref}),
+                $X->comment  ($pragmaData->{phenotype_description}[0]->{Comment}),
+        ),
+        $X->phased_genotypes(
+                $X->seqid    ($pragmaData->{phased_genotypes}[0]->{Seqid}),
+                $X->source   ($pragmaData->{phased_genotypes}[0]->{Source}),
+                $X->type     ($pragmaData->{phased_genotypes}[0]->{Type}),
+                $X->dbxref   ($pragmaData->{phased_genotypes}[0]->{Dbxref}),
+                $X->comment  ($pragmaData->{phased_genotypes}[0]->{Comment}),
+        ),
+        ## start of the GVFClin terms
+        $X->genetic_analysis_master_panel(
+                $X->genetic_analysis_master_panel($pragmaData->{genetic_analysis_master_panel}[0]->{ID}),
+                $X->comment ($pragmaData->{genetic_analysis_master_panel}[0]->{Comment}),
+                $X->obr     ($pragmaData->{genetic_analysis_master_panel}[0]->{OBR}),
+        ),
+        $X->genetic_analysis_summary_panel(
+                $X->id      ($pragmaData->{genetic_analysis_summary_panel}[0]->{ID}),
+                $X->comment ($pragmaData->{genetic_analysis_summary_panel}[0]->{Comment}),
+                $X->gamp    ($pragmaData->{genetic_analysis_summary_panel}[0]->{GAMP}),
+        ),
+        $X->genetic_analysis_discrete_report_panel(
+                $X->comment($pragmaData->{'genetic_analysis_discrete_report_panel'}[0]->{'Comment'}),
+        ),
+        $X->genetic_analysis_discrete_sequence_variant_panel(
+                $X->comment($pragmaData->{'genetic_analysis_discrete_sequence_variant_panel'}[0]->{'Comment'}),
+        ),
     );
-    $twig->parsefile($self->get_xmlTemp);
-    $twig->flush($fh);
-}
+    
+    # Collect the two different pragma sets
+    my $pragmaSection = $X->pragma($simplePragma, $structPragma);
 
-#-----------------------------------------------------------------------------
-
-sub _featureXML {
-    my ($self, $gvf, $fh) = @_;
-
-    my $twig;
-    foreach my $f (@{$gvf}){
-        my $eff = $f->{'attribute'}->{'Variant_effect'};
-        
-        $twig = XML::Twig->new(
-            pretty_print  => 'indented',
-            twig_roots    => { feature => 1 },
-            twig_handlers => {
-                seqid             => sub {$_->set_text($f->{'seqid'})},
-                source            => sub {$_->set_text($f->{'source'})},
-                type              => sub {$_->set_text($f->{'type'})},
-                start             => sub {$_->set_text($f->{'start'})},
-                end               => sub {$_->set_text($f->{'end'})},
-                score             => sub {$_->set_text($f->{'score'})},
-                strand            => sub {$_->set_text($f->{'strand'})},                
-                id                => sub {$_->set_text($f->{'attribute'}->{'ID'})},
-                alias             => sub {$_->set_text($f->{'attribute'}->{'Alias'})},
-                dbxref            => sub {$_->set_text($f->{'attribute'}->{'Dbxref'})},
-                variant_seq       => sub {$_->set_text($f->{'attribute'}->{'Variant_seq'})},
-                reference_seq     => sub {$_->set_text($f->{'attribute'}->{'Reference_seq'})},
-                variant_reads     => sub {$_->set_text($f->{'attribute'}->{'Variant_reads'})},
-                total_reads       => sub {$_->set_text($f->{'attribute'}->{'Total_reads'})},
-                zygosity          => sub {$_->set_text($f->{'attribute'}->{'Zygosity'})},
-                variant_freq      => sub {$_->set_text($f->{'attribute'}->{'Variant_freq'})},
-                start_range       => sub {$_->set_text($f->{'attribute'}->{'Start_range'})},
-                end_range         => sub {$_->set_text($f->{'attribute'}->{'End_range'})},
-                phased            => sub {$_->set_text($f->{'attribute'}->{'Phased'})},
-                genotype          => sub {$_->set_text($f->{'attribute'}->{'Genotype'})},
-                individual        => sub {$_->set_text($f->{'attribute'}->{'Individual'})},
-                variant_codon     => sub {$_->set_text($f->{'attribute'}->{'Variant_codon'})},
-                reference_codon   => sub {$_->set_text($f->{'attribute'}->{'Reference_codon'})},
-                variant_aa        => sub {$_->set_text($f->{'attribute'}->{'Variant_aa'})},
-                reference_aa      => sub {$_->set_text($f->{'attribute'}->{'Reference_aa'})},
-                breakpoint_detail => sub {$_->set_text($f->{'attribute'}->{'Breakpoint_detail'})},
-                sequence_context  => sub {$_->set_text($f->{'attribute'}->{'Sequence_context'})},
+    my @list;
+    foreach my $i ( @{$data} ) {
+        chomp $i;
+   
+        my @effectList;
+        if ( $i->{attribute}->{Variant_effect} ){
+            my $count;
+            foreach my $xml ( @{$i->{attribute}->{Variant_effect}} ){
                 
-                # Creating variant effect xml data.
-                # This method call will split each of the possible Variant_effects
-                # And build a new twig
-                variant_effect => sub { $self->_variantTwig($eff) },
-               
-                # start of GVFClin features
-                clin_gene                      => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_gene'})},
-                clin_genomic_reference         => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_genomic_reference'})},
-                clin_transcript                => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_transcript'})},
-                clin_allele_name               => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_allele_name'})},
-                clin_variant_id                => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_variant_id'})},
-                clin_HGVS_DNA                  => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_HGVS_DNA'})},
-                clin_variant_type              => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_variant_type'})},
-                clin_HGVS_protein              => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'})},
-                clin_aa_change_type            => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_aa_change_type'})},
-                clin_DNA_region                => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_DNA_region'})},
-                clin_allelic_state             => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'clin_allelic_state'})},
-                clin_variant_display_name      => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_variant_display_name'})},
-                clin_disease_variant_interpret => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_disease_variant_interpret'})},
-                clin_drug_metabolism_interpret => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_drug_metabolism_interpret'})},
-                clin_drug_efficacy_interpret   => sub {$_->set_text($f->{'attribute'}->{'clin'}->{'Clin_drug_efficacy_interpret'})},
-            },
+                # reset the count
+                if ($xml->{seqid}) { $count = 0 }
+                
+                $count++;
+                my $id      = $X->feature_id ({effect => $count }, $xml->{feature_id});
+                my $index   = $X->index      ({effect => $count}, $xml->{index});
+                my $seq_var = $X->sequence_variant ({effect => $count}, $xml->{sequence_variant});
+                my $type    = $X->feature_type     ({effect => $count}, $xml->{feature_type});
+
+                push @effectList, $id, $index, $seq_var, $type;
+            }
+        }
+
+        my $featureLine = $X->feature(
+            $X->seqid ( $i->{seqid} ),
+            $X->source( $i->{source} ),
+            $X->type  ( $i->{type} ),
+            $X->start ( $i->{start} ),
+            $X->end   ( $i->{end} ),
+            $X->score ( $i->{score} ),
+            $X->strand( $i->{strand} ),
+
+            # attribute xml elements
+            $X->id         ( $i->{attribute}->{ID} ),
+            $X->alias      ( $i->{attribute}->{Alias} ),
+            $X->dbxref     ( $i->{attribute}->{Dbxref} ),
+            $X->variant_seq( $i->{attribute}->{Variant_seq} ),
+            $X->reference_seq ( $i->{attribute}->{Reference_seq} ),
+            $X->variant_reads ( $i->{attribute}->{Variant_reads} ),
+            $X->total_reads   ( $i->{attribute}->{Total_reads} ),
+            $X->zygosity      ( $i->{attribute}->{Zygosity} ),
+            $X->variant_freq  ( $i->{attribute}->{Variant_freq} ),
+            $X->variant_effect( @effectList),
+            $X->start_range   ( $i->{attribute}->{Start_range} ),
+            $X->end_range     ( $i->{attribute}->{End_range} ),
+            $X->phased        ( $i->{attribute}->{Phased} ),
+            $X->genotype      ( $i->{attribute}->{Genotype} ),
+            $X->individual       ( $i->{attribute}->{Individual} ),
+            $X->variant_codon    ( $i->{attribute}->{Variant_codon} ),
+            $X->reference_codon  ( $i->{attribute}->{Reference_codon} ),
+            $X->variant_aa       ( $i->{attribute}->{Variant_aa} ),
+            $X->reference_aa     ( $i->{attribute}->{Reference_aa} ),
+            $X->breakpoint_detail( $i->{attribute}->{Breakpoint_detail} ),
+            $X->sequence_context ( $i->{attribute}->{Sequence_context} ),
+            
+            # Clin terms
+            $X->clin_gene             ( $i->{attribute}->{clin}->{Clin_gene} ),
+            $X->clin_genomic_reference( $i->{attribute}->{clin}->{Clin_genomic_reference} ),
+            $X->clin_transcript       ( $i->{attribute}->{clin}->{Clin_transcript} ),
+            $X->clin_allele_name      ( $i->{attribute}->{clin}->{Clin_allele_name} ),
+            $X->clin_variant_id       ( $i->{attribute}->{clin}->{Clin_variant_id} ),
+            $X->clin_HGVS_DNA         ( $i->{attribute}->{clin}->{Clin_HGVS_DNA} ),
+            $X->clin_variant_type     ( $i->{attribute}->{clin}->{Clin_variant_type} ),
+            $X->clin_HGVS_protein     ( $i->{attribute}->{clin}->{Clin_HGVS_protein} ),
+            $X->clin_aa_change_type   ( $i->{attribute}->{clin}->{Clin_aa_change_type} ),
+            $X->clin_DNA_region       ( $i->{attribute}->{clin}->{Clin_DNA_region} ),
+            $X->clin_allelic_state    ( $i->{attribute}->{clin}->{Clin_allelic_state} ),
+            $X->clin_variant_display_name     ( $i->{attribute}->{clin}->{Clin_variant_display_name} ),
+            $X->clin_disease_variant_interpret( $i->{attribute}->{clin}->{Clin_disease_variant_interpret} ),
+            $X->clin_drug_metabolism_interpret( $i->{attribute}->{clin}->{Clin_drug_metabolism_interpret} ),
+            $X->clin_drug_efficacy_interpret  ( $i->{attribute}->{clin}->{Clin_drug_efficacy_interpret} ),            
         );
-        $twig->parsefile($self->get_xmlTemp);
-        $twig->flush($fh);
-    }
-}
-
-#-----------------------------------------------------------------------------
-
-sub _variantTwig {
-    my ($self, $eff) = @_;
-     
-    my $ct = 1; 
-    foreach my $f (@{$eff}){
-        $_->insert_new_elt("sequence_variant_$ct", $f->{'sequence_variant'}),
-        $_->insert_new_elt("index_$ct", $f->{'index'}),
-        $_->insert_new_elt("feature_type_$ct", $f->{'feature_type'}),
-        $_->insert_new_elt("feature_id", $f->{'feature_id'}),
-        $ct++;
-    }   
+        push @list, $featureLine;
+   }
+    print $xmlFH $X->GVFClin($pragmaSection, @list);
+    $xmlFH->close;
 }
 
 #-----------------------------------------------------------------------------
@@ -462,23 +319,21 @@ sub _completeXML {
     my $self = shift;
 
     my $basename = basename($self->get_file, ".gvf");
-    
+
     my $xmlFH  = IO::File->new('temp.xml', 'r') || die "XML temp file not found\n";
     my $outfile = "$basename" . '.xml';
     
     my $xmlNEW = IO::File->new("$outfile", 'a+');
     
     print $xmlNEW '<?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="GVF-CDA-GTR.xsl"?>
-<GVFClin>';
+<?xml-stylesheet type="text/xsl" href="GVF-CDA-GTR.xsl"?>', "\n";
     
     while( <$xmlFH> ) {
         # Only print lines which have data
         if ( $_ =~ /(><\/)/) { next }
+        
         print $xmlNEW $_;
     }
-    print $xmlNEW "\n</GVFClin>\n";
-
     # remove the temp file
     `rm temp.xml`;
     
@@ -499,7 +354,7 @@ sub _toGTR {
     
     # get xml file to use for XSLT
     my $xmlFile = "$basename" . ".xml";
-
+    
     # use Saxon to do transformation.
     # and change gt lt and &amp.
     system("java -jar ../data/Saxon/saxon9he.jar -xsl:../data/XML/GVF-CDA-GTR.xsl -s:$xmlFile -o:$outfile");

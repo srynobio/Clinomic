@@ -200,7 +200,7 @@ sub gvfValadate {
         else {
             $mismatch++;
             # if ref does not match collect it and add to report 
-            my $result = "$chr\t$start\t$end\tFasta_Seq: $bioSeq\tFile_Seq: $dataRef\n";
+            my $result = "$chr\t$start\t$end\tFasta_Ref_Seq: $bioSeq\tFile_Ref_Seq: $dataRef\n";
             push @report, $result;
             
             # if user wants to update ref to current fasta build this is where it happens.
@@ -286,12 +286,13 @@ sub gvfGeneFind {
                         $_ =~ /(.*)=(.*)/g;
                         my ($gene, undef) = split /,/, $2;
                         my ($tag, $value) = split /:/, $gene;
+                        
                         my $geneMatch = ( $ncbi->{$value} ) ? $ncbi->{$value} : 'NULL';
                         next if $geneMatch eq 'NULL';
                         
                         my $effect = {
                             index            => '0',
-                            feature_id1       => $geneMatch,
+                            feature_id       => $geneMatch,
                             sequence_variant => 'gene_variant',
                             feature_type     => 'gene',
                         };
@@ -328,7 +329,7 @@ sub gvfRefBuild {
         my $gene;
         foreach ( @{$t->{'attribute'}->{'Variant_effect'}} ) {
             if( $_->{'feature_type'} eq 'gene') {
-                $gene = $_->{'feature_id1'};
+                $gene = $_->{'feature_id'};
                 last;
             }
             else { next }
@@ -337,7 +338,6 @@ sub gvfRefBuild {
         
         # search the db for matching gene names, and add all clin data
         # to working gvf file
-
         if ( $refInfo->{$gene} ){
             my $clin = {
                 Clin_gene              => $gene,

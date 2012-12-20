@@ -14,12 +14,18 @@ our ($VERSION) = '0.01';
 my $builder = Clinomic->new_with_options();
 my $feature = $builder->gvfParser;
 
-$builder->xmltest($feature);
 
-__END__
+#$builder->xmltest($feature);
+
+#__END__
+
 # use wrapper method to run all steps.
 my $clin = $builder->gvfRelationBuild($feature);
 
+#$builder->xmltest($feature);
+
+
+#__END__
 # section which allow you to term_switch.
 if ($builder->need_switch){
     $feature = $builder->_termUpdate($feature);    
