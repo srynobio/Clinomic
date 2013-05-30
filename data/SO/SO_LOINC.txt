@@ -1,4 +1,4 @@
-# SO_sequence_type	LOINC_answer_list
+# SO_sequence_type  LOINC_answer_list
 deletion,deletion
 deleted_sequence,deletion  
 nucleotide deletion,deletion
