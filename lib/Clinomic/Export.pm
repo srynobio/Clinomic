@@ -4,13 +4,21 @@ use IO::File;
 use File::Basename;
 use XML::Generator;
 
-use Data::Printer;
+use Data::Dumper;
 
 with 'MooseX::Getopt';
 
 #-----------------------------------------------------------------------------
 #------------------------------- Attributes ----------------------------------
 #-----------------------------------------------------------------------------
+
+has 'export' => (
+  is      => 'rw',
+  isa     => 'Str',
+  reader  => 'get_export',
+  default => 'gvfclin',
+  documentation => q(Export GVF file to various formats.  Options: gvfclin, xml, hl7, all.  Default is gvfclin.),
+);
 
 has 'xmlTemp' => (
     traits  => ['NoGetopt'],
@@ -32,7 +40,8 @@ sub exporter {
 
     if ( $type eq 'gvfclin' ) {
         warn "{Clinomic} Building GVFClin file.\n";
-        $self->_toGVF($gvf);
+        $self->pragma_writer($gvf);
+        $self->feature_writer($gvf);
     }
     elsif ( $type eq 'xml' ) {
         warn "{Clinomic} Building XML.\n";
@@ -47,7 +56,8 @@ sub exporter {
     }
     elsif ( $type eq 'all' ) {
         warn "{Clinomic} Building all output files.\n";
-        $self->_toGVF($gvf);
+        $self->pragma_writer($gvf);
+        $self->feature_writer($gvf);
         $self->gvf2XML($gvf);
         $self->_completeXML;
         $self->_toGTR($gvf);
@@ -55,8 +65,38 @@ sub exporter {
 }
 
 #-----------------------------------------------------------------------------
+sub pragma_writer {
 
-sub _toGVF {
+  my $self = shift;
+
+  # get the file name
+  my $basename = basename( $self->get_file, ".gvf" );
+  my $outfile = "$basename" . '.gvfclin';
+
+  my $outFH = IO::File->new( "$outfile", 'a+' );
+
+  # check for pragama values.
+  my $pragma;
+  if ( $self->has_pragmas ) {
+    $pragma = $self->get_pragmas;
+  }
+
+  # print out pragma values.
+  while ( my ( $k, $v ) = each %{$pragma} ) {
+    $k =~ s/\_/\-/g;
+    if ( ref $v->[0] ) {
+      print $outFH "##$k ";
+      while ( my ( $key, $v ) = each %{ $v->[0] } ) {
+        print $outFH "$key=$v;";
+      }
+      print $outFH "\n";
+    }
+    else { print $outFH "##$k " . $v->[0], "\n"; }
+  }
+}
+#-----------------------------------------------------------------------------
+
+sub feature_writer {
     my ( $self, $gvf ) = @_;
 
     # get the file name
@@ -65,29 +105,10 @@ sub _toGVF {
 
     my $outFH = IO::File->new( "$outfile", 'a+' );
 
-    # check for pragama values.
-    my $pragma;
-    if ( $self->has_pragmas ) {
-        $pragma = $self->get_pragmas;
-    }
-
-    # print out pragma values.
-    while ( my ( $k, $v ) = each %{$pragma} ) {
-        $k =~ s/\_/\-/g;
-        if ( ref $v->[0] ) {
-            print $outFH "##$k ";
-            while ( my ( $key, $v ) = each %{ $v->[0] } ) {
-                print $outFH "$key=$v;";
-            }
-            print $outFH "\n";
-        }
-        else { print $outFH "##$k " . $v->[0], "\n"; }
-    }
-
     # print out in gvf format.
     foreach my $i ( @{$gvf} ) {
 
-        my $first8 = "chr$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t"
+        my $first8 = "$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t"
           . "$i->{'start'}\t$i->{'end'}\t$i->{'score'}\t$i->{'strand'}\t.";
 
         print $outFH "$first8\t";
@@ -126,6 +147,78 @@ sub _toGVF {
     }
     $outFH->close;
 }
+#-----------------------------------------------------------------------------
+
+#sub _toGVF {
+#    my ( $self, $gvf ) = @_;
+#
+#    # get the file name
+#    my $basename = basename( $self->get_file, ".gvf" );
+#    my $outfile = "$basename" . '.gvfclin';
+#
+#    my $outFH = IO::File->new( "$outfile", 'a+' );
+#
+#    # check for pragama values.
+#    my $pragma;
+#    if ( $self->has_pragmas ) {
+#        $pragma = $self->get_pragmas;
+#    }
+#
+#    # print out pragma values.
+#    while ( my ( $k, $v ) = each %{$pragma} ) {
+#        $k =~ s/\_/\-/g;
+#        if ( ref $v->[0] ) {
+#            print $outFH "##$k ";
+#            while ( my ( $key, $v ) = each %{ $v->[0] } ) {
+#                print $outFH "$key=$v;";
+#            }
+#            print $outFH "\n";
+#        }
+#        else { print $outFH "##$k " . $v->[0], "\n"; }
+#    }
+#
+#    # print out in gvf format.
+#    foreach my $i ( @{$gvf} ) {
+#
+#        my $first8 = "$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t"
+#          . "$i->{'start'}\t$i->{'end'}\t$i->{'score'}\t$i->{'strand'}\t.";
+#
+#        print $outFH "$first8\t";
+#
+#        while ( my ( $k2, $v2 ) = each %{ $i->{'attribute'} } ) {
+#
+#            if ( $k2 eq 'clin' ) {
+#                while ( my ( $k, $v ) = each %{$v2} ) {
+#                    print $outFH "$k=$v;" if $v;
+#                }
+#            }
+#            elsif ( $k2 eq 'Variant_effect' ) {
+#                print $outFH "Variant_effect=";
+#
+#                my $line;
+#                foreach ( @{$v2} ) {
+#
+#                    my $fields = join( ' ',
+#                        $_->{'sequence_variant'}, $_->{'index'},
+#                        $_->{'feature_type'},     $_->{'feature_id'} );
+#
+#                    # create one line seperated by comma.
+#                    $line .= $fields;
+#                    $line .= ',';
+#                }
+#
+#                # remove last comma, and print line
+#                $line =~ s/(.*)\,$/$1;/;
+#                print $outFH $line;
+#            }
+#            else {
+#                print $outFH "$k2=$v2;" if $v2;
+#            }
+#        }
+#        print $outFH "\n";
+#    }
+#    $outFH->close;
+#}
 
 #-----------------------------------------------------------------------------
 

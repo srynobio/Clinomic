@@ -1,32 +1,33 @@
 #!/usr/bin/perl
-# ?? paCiFICA   genomiC FIle Clinical Annotator
-
+# Clinomic
 use strict;
 use warnings;
 use lib '/home/srynearson/Clinomic/lib';
 use Clinomic;
 use File::Basename;
+use File::Find;
+our ($VERSION) = '0.01';
 
 use Data::Dumper;
 
-our ($VERSION) = '0.01';
-
-# obj building.
-# build and capture gvf data.
-my $builder = Clinomic->new_with_options();
-
-
-my $feature = $builder->gvfParser;
-
-# use wrapper method to run all steps.
-my $clin = $builder->gvfRelationBuild($feature);
-
-####$builder->finderTest($clin);
-
-# section which allow you to term_switch.
-if ($builder->need_switch){
-    $feature = $builder->_termUpdate($feature); 
+# Check if needed dir are present.
+my @needed_dir = qw(../data/GFF ../data/dbSNP ../data/ClinVar
+                    ../data/NCBI ../data/GTF);
+BEGIN {
+  foreach (@needed_dir) {
+    unless ( -d $_ ) {
+      die "Directory $_ not found, have you ran ClinIndex?\n";
+    }
+  }
 }
 
+my $clin = Clinomic->new_with_options();
+my $feature = $clin->gvfParser;
+
+my $gvfclin = $clin->gvfRelationBuild($feature);
+
+
+print Dumper($gvfclin);
 # send clin data to be printed out as requested.
-$builder->exporter($clin);
+#$clin->exporter($gvfclin);
+

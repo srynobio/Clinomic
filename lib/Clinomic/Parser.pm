@@ -4,6 +4,25 @@ use Carp;
 use namespace::autoclean;
 use IO::File;
 
+
+
+
+
+
+##-----------------------------------------------------------------------------
+##------------------------------- Attributes ----------------------------------
+##-----------------------------------------------------------------------------
+
+has 'data_directory' => (
+  traits  => ['NoGetopt'],
+  is      => 'rw',
+  isa     => 'Str',
+  default => '../data/',
+  writer  => 'set_directory',
+  reader  => 'get_directory',
+);
+
+
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
 #------------------------------------------------------------------------------
@@ -31,7 +50,6 @@ sub hgncGene {
 
     return \%ncbi;
 }
-
 #------------------------------------------------------------------------------
 
 sub refseq {
@@ -46,7 +64,6 @@ sub refseq {
     my %refseq;
     foreach my $line (<$ref_fh>) {
         chomp $line;
-
         next if $line =~ /^#/;
 
         my @refs = split /\t/, $line;
@@ -56,23 +73,26 @@ sub refseq {
         unless ( $refs[12] =~ /Reference GRCh37.p10/ ) { next }
         unless ( $refs[5] =~ /^AP_(.*)$/ || $refs[5] =~ /^NP_(.*)$/ ) { next }
 
-        $refseq{ $refs[1] } = { protein_acc => $refs[3], };
+        $refseq{ $refs[1] } = {
+          rna_acc => $refs[3],
+          pro_acc => $refs[5],
+          gen_acc => $refs[7],
+        };
     }
     $ref_fh->close;
     return ( \%refseq );
 }
-
 #------------------------------------------------------------------------------
 
 sub gvfParser {
-    my ( $self, $data ) = @_;
+    my $self = shift;
 
     my $feature_line = $self->_file_splitter('feature');
 
     # extract out pragmas and store them in object;
     $self->_pragmas;
 
-    my ( @return_list, @seqWarn );
+    my @return_list;
     foreach my $lines ( @{$feature_line} ) {
         chomp $lines;
 
@@ -84,15 +104,16 @@ sub gvfParser {
         my @attributes_list = split( /\;/, $attribute ) if $attribute;
 
         next if ! $seq_id;
-        unless ( $seq_id =~ /^chr|(\d+)/ ) { push @seqWarn, $seq_id; next; }
-        $seq_id =~ s/^chr(\d+|X|Y)/$1/g;
+        if ($seq_id !~ /^chr/) {
+            die "{Clinomic} GVF feature lines must start with chr, please updated.\n";
+        }
 
         my %atts;
         foreach my $attributes (@attributes_list) {
             $attributes =~ /(.*)=(.*)/g;
             $atts{$1} = $2;
         }
-        my $value = $self->_variant_builder( \%atts );
+        my $value = $self->_variant_effect_builder( \%atts );
 
         my $feature = {
             seqid     => $seq_id,
@@ -106,12 +127,8 @@ sub gvfParser {
         };
         push @return_list, $feature;
     }
-    if ( scalar @seqWarn > 1 ) {
-        die "One or more seqid did not start with chr# or #. Clinomic requires this.\n";
-    }
     return \@return_list;
 }
-
 #------------------------------------------------------------------------------
 
 sub _file_splitter {
@@ -139,7 +156,37 @@ sub _file_splitter {
     if ( $request eq 'pragma' )  { return \@pragma }
     if ( $request eq 'feature' ) { return \@feature_line }
 }
+#------------------------------------------------------------------------------
 
+sub _variant_effect_builder {
+  my ( $self, $atts ) = @_;
+
+  my %vEffect;
+  while ( my ( $keys, $value ) = each %{$atts} ) {
+
+    if ( $keys eq 'Variant_effect' ) {
+      my @effect = split /,/, $value;
+
+      my @effectList;
+      foreach (@effect) {
+        my ( $sv, $index, $ft, $id ) = split /\s/, $_;
+
+        my $effect = {
+          sequence_variant => $sv,
+          index            => $index,
+          feature_type     => $ft,
+          feature_id       => $id,
+        };
+        push @effectList, $effect;
+      }
+      $vEffect{$keys} = [@effectList];
+    }
+    else {
+      $vEffect{$keys} = $value;
+    }
+  }
+  return \%vEffect;
+}
 #------------------------------------------------------------------------------
 
 no Moose;

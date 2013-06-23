@@ -14,6 +14,7 @@ use Data::Dumper;
 #-----------------------------------------------------------------------------
 
 has 'annotator' => (
+    traits  => ['NoGetopt'],
     is       => 'rw',
     #isa      => 'Bool',
     isa      => 'Str',
@@ -27,6 +28,7 @@ has 'annotator' => (
 );
 
 has 'gal_object' => (
+    traits  => ['NoGetopt'],
     is     => 'rw',
     isa    => 'Object',
     reader => 'get_gal',
@@ -36,6 +38,7 @@ has 'gal_object' => (
 # will need to incorperate current gff file, but for now testing with this.
 
 has 'gff_annot' => (
+    traits  => ['NoGetopt'],
     is       => 'rw',
     isa      => 'Str',
     reader   => 'get_gff_annot',

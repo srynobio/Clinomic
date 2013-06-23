@@ -10,6 +10,11 @@ my $parsed = $clin->gvfParser;
 $MAX_PROCESSES = 10;
 my $pm = Parallel::ForkManager->new($MAX_PROCESSES, '.');
 
+
+##########
+my %test;
+#########
+
 my %chr;
 foreach my $refs (@{$parsed}){
   chomp $refs;
@@ -23,20 +28,31 @@ $pm->run_on_finish (
     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_ref) = @_;
 
     if (defined($data_ref)) {
-      my $string = ${$data_ref};
-      print Dumper($string);
-      #print "$string\n";
+      push @{$test{$pid}}, ${$data_ref};
     }
     else { print qq|No message received from child process $pid!\n| }
   }
 );
 
 foreach my $feature (keys %chr) {
-
   my $pid = $pm->start and next;
-  print "starting on chromosome $feature\n";
   my $gvfclin = $clin->gvfRelationBuild($chr{$feature});
   $pm->finish(0, \$gvfclin);
 }
 $pm->wait_all_children;
+
+
+$clin->pragma_writer();
+foreach my $proc (keys %test){
+  foreach (@{$test{$proc}} ) {
+    $clin->feature_writer($_);
+  }
+}
+
+
+
+
+
+
+
 
