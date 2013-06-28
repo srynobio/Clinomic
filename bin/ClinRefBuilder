@@ -17,7 +17,7 @@ BEGIN {
 
 my $gff = sub {
   print "{ClinRefBuilder} Downloading and unpacking GFF file.\n";
-  `wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz`;
+  `wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37*level.gff3.gz 2> clinrefbuilder.log`;
   `mv ref_GRCh37*level.gff3.gz ref_GRCh37.gff3.gz`;
   print "{ClinRefBuilder} Unzipping GFF file\n";
   `gunzip ref_GRCh37.gff3.gz`;
@@ -31,7 +31,7 @@ my $gff = sub {
 };
 
 my $gtf = sub {
-  `wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz`;
+  `wget ftp://ftp.ensembl.org/pub/release-69/gtf/homo_sapiens/Homo_sapiens.GRCh37.69.gtf.gz 2> clinrefbuilder.log`;
   `gunzip Homo_sapiens.GRCh37.69.gtf.gz`;
   my $perl_run = "perl -lane 'next unless \$F[0] =~ /(^\\d+|^X|^Y|^MT)/; if ( \$F[1] eq 'protein_coding' ) { print }' Homo_sapiens.GRCh37.69.gtf > tmp.txt";
   `$perl_run`;
@@ -45,7 +45,7 @@ my $gtf = sub {
 
 my $dbsnp = sub {
   print "{ClinRefBuilder} Downloading and unpacking dbSNP file.\n";
-  `wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz`;
+  `wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606/VCF/00-All.vcf.gz 2> clinrefbuilder.log`;
   print "{ClinRefBuilder} Unzipping dbSNP file\n";
   `gunzip 00-All.vcf.gz`;
   print "{ClinRefBuilder} Updating dbSNP file.\n";
@@ -59,7 +59,7 @@ my $dbsnp = sub {
 
 my $clinvar = sub {
   print "{ClinRefBuilder} Downloading ClinVar files.\n";
-  `wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_00-latest.vcf.gz`;
+  `wget ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf/clinvar_00-latest.vcf.gz 2> clinrefbuilder.log`;
   `mv clinvar_*.vcf.gz clinvar_sigfile.vcf.gz`;
   `gunzip clinvar_sigfile.vcf.gz`;
   `grep -v '^#' clinvar_sigfile.vcf > clinvar_sig.vcf`;
@@ -72,8 +72,8 @@ my $clinvar = sub {
 
 my $ncbi = sub {
   print "{ClinRefBuilder} Downloading and NCBI files.\n";
-  `wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz`;
-  `wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz`;
+  `wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz 2> clinrefbuilder.log`;
+  `wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene2refseq.gz 2> clinrefbuilder.log`;
   print "{ClinRefBuilder} Unzipping NCBI files.\n";
   system("gunzip gene_info.gz");
   system("gunzip gene2refseq.gz");

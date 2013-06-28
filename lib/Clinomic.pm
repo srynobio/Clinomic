@@ -2,8 +2,6 @@ package Clinomic;
 use Moose;
 use Tabix;
 use IO::File;
-use Bio::DB::Fasta;
-#####use Bio::Tools::CodonTable;
 use File::Basename;
 
 use Data::Dumper;
@@ -16,37 +14,29 @@ with 'MooseX::Getopt';
 ##-----------------------------------------------------------------------------
 
 has 'file' => (
-    is       => 'rw',
-    isa      => 'Str',
-    reader   => 'get_file',
-    required => 1,
-    documentation => q|REQUIRED.  Path to the GVF file you want to convert to Clinical document.|,
+    is            => 'rw',
+    isa           => 'Str',
+    reader        => 'get_file',
+    required      => 1,
+    documentation => q|[REQUIRED] Path to the GVF file you want to convert to Clinical document.|,
 );
 
 has 'fasta' => (
-    traits  => ['NoGetopt'],
-    is      => 'rw',
-    isa     => 'Str',
-    reader  => 'get_fasta',
+    traits   => ['NoGetopt'],
+    is       => 'rw',
+    isa      => 'Str',
+    reader   => 'get_fasta',
     required => 1,
-    default => '../data/Fasta/chrAll.fa',
+    default  => '../data/Fasta/chrAll.fa',
 );
 
 has 'feature' => (
-    traits  => ['NoGetopt'],
-    is      => 'rw',
-    isa     => 'Str',
-    reader  => 'get_gff',
+    traits   => ['NoGetopt'],
+    is       => 'rw',
+    isa      => 'Str',
+    reader   => 'get_gff',
     required => 1,
-    default => '../data/GFF/Updated.ref_GRCh37.sorted.gff3.gz',
-);
-
-has 'validate' => (
-    is      => 'rw',
-    isa     => 'Int',
-    reader  => 'get_percent',
-    default => '90',
-    documentation => q|Validate percentage compared to reference genome fasta file.  Default is 90%.|,
+    default  => '../data/GFF/Updated.ref_GRCh37.sorted.gff3.gz',
 );
 
 has 'tabix_dbsnp' => (
@@ -66,12 +56,12 @@ has 'tabix_clinsig' => (
 );
 
 has 'tabix_gtf' => (
-    traits  => ['NoGetopt'],
-    is      => 'rw',
-    isa     => 'Str',
-    reader  => 'get_gtf_tabix',
+    traits   => ['NoGetopt'],
+    is       => 'rw',
+    isa      => 'Str',
+    reader   => 'get_gtf_tabix',
     required => 1,
-    default => '../data/GTF/Homo_sapiens.gtf.gz',
+    default  => '../data/GTF/Homo_sapiens.gtf.gz',
 );
 
 has 'pragma' => (
@@ -84,10 +74,11 @@ has 'pragma' => (
 );
 
 has 'report_all' => (
-  is  => 'rw',
-  isa => 'Bool',
-  predicate => 'want_report',
-  documentation => q|Generate report with all variants from original file, not just clinically annotated. values: 1 or 0|,
+  is            => 'rw',
+  isa           => 'Str',
+  predicate     => 'want_report',
+  default       => 'hgnc',
+  documentation => q|Report all variants from original file, not just HGNC/LOINC annotated. Default hgnc. Options=hgnc,all|,
 );
 
 ##-----------------------------------------------------------------------------
@@ -110,81 +101,6 @@ sub gvfRelationBuild {
   return $stp8;
 }
 ##-----------------------------------------------------------------------------
-
-sub gvfValadate {
-    my ( $self, $data ) = @_;
-    warn "{Clinomic} Valadating GVF file.\n";
-
-    # db handle and indexing fasta file.
-    my $db = Bio::DB::Fasta->new( $self->get_fasta, -debug => 1 )
-      || die "Fasta file not found $@\n";
-
-    my @report;
-    my $noRef = 0;
-    my ( $correct, $mismatch, $total );
-    foreach my $i ( @{$data} ) {
-
-        # keep track of the total number of lines in file.
-        $total++;
-
-        my $chr   = $i->{'seqid'};
-        my $start = $i->{'start'};
-        my $end   = $i->{'end'};
-
-        my $dataRef = uc( $i->{'attribute'}->{'Reference_seq'} );
-        if ( $dataRef eq '-' ) { $noRef++; next; }
-
-        # check that the strand matches.
-        #ccmy $strand  = $i->{'strand'};
-        my $strand = ( defined( $i->{'strand'} ) ? $i->{'strand'} : 'NULL' );
-        if ( $strand eq '-' ) { tr/ACGT/TGCA/ }
-
-        # call to Bio::DB.
-        my $bioSeq = $db->seq("$chr:$start..$end");
-        $bioSeq = uc($bioSeq);
-
-        if ( $bioSeq eq $dataRef ) {
-            $correct++;
-        }
-        else {
-            $mismatch++;
-
-            # if ref does not match collect it and add to report
-            my $result = "$chr\t$start\t$end\tFasta_Ref_Seq: $bioSeq\tFile_Ref_Seq: $dataRef\n";
-            push @report, $result;
-        }
-    }
-
-    ## print out report of incorect reference seq.
-    if ( scalar @report > 1 ) {
-
-        my $file = $self->get_file;
-        $file =~ s/(\S+).gvf/$1.report/g;
-
-        my $reportFH = IO::File->new( $file, 'a+' ) || die "cant open file\n";
-
-        print $reportFH "## Unmatched Reference for $file ##\n";
-        foreach (@report) {
-            chomp $_;
-            print $reportFH "$_\n";
-        }
-    }
-
-    # check if passes default/given value.
-    if ( $mismatch == $total ) {
-        die "No matches were found, possible no Reference_seq in file\n";
-    }
-    my $value = ( $correct / ( $total - $noRef ) ) * 100;
-
-    if ( $value <= $self->get_percent ) {
-        die sprintf( "
-    Reference sequence does not validate to %s%%,
-    Check file or enter lower validate value.
-    RESULTS: %s matches %5.2f%% to reference.\n\n", $self->get_percent,
-            $self->get_file, $value );
-    }
-}
-##------------------------------------------------------------------------------
 
 sub gvfGeneFind {
     my ( $self, $data ) = @_;
@@ -213,22 +129,12 @@ sub gvfGeneFind {
 
         # create the index
         my $index;
-        ($pos eq '0') ? $index = 1 :
-        ($pos eq '1') ? $index = 0 :
-        ($pos eq '-1') ? $index = 0: die "cannot index postion the variant\n";
+        ($pos eq '0') ? $index  = 1 :
+        ($pos eq '1') ? $index  = 0 :
+        ($pos eq '-1') ? $index = 0 : $index = 0;
 
         # check the tabix file for matching regions
         my $iter = $tab->query( $chr, $start - 1, $end + 1 );
-#
-#        my $iter; ######
-#        print "checking chr:$chr, start:$start, end:$end\n";
-#        eval { $tab->query( $chr, $start - 1, $end + 1 ) };
-#
-#        if ($@) {
-#          print "inside\n";
-#          print Dumper($i);
-#          die "$@\t$chr, $start - 1, $end + 1\n";
-#        }
 
         my %atts;
         while ( my $read = $tab->read($iter) ) {
@@ -265,7 +171,7 @@ sub gvfGeneFind {
     ## This section removes any variants which have no gene match.
     ## Little reference witchcraft to try to keep speed and grep only Variant_effect with values.
     my @kept;
-    if ($self->want_report) {
+    if ($self->want_report eq 'hgnc') {
       my $updateGVF = \@updateGVF;
       @kept =
         grep { $_->{'attribute'}->{'Variant_effect'}->[0]->{'feature_type'} }
@@ -276,7 +182,7 @@ sub gvfGeneFind {
     }
 
     # return one of the two
-    ($self->want_report) ? return \@kept : \@updateGVF;
+    ($self->want_report eq 'all') ? return \@kept : \@updateGVF;
 }
 ##------------------------------------------------------------------------------
 
@@ -301,7 +207,7 @@ sub gvfRefBuild {
         # add gene if found.
         $t->{'attribute'}->{'clin'}->{'Gene_identifier'} = "LOINC:40018-6 HGNC:$gene";
 
-        # search the db for matching gene names, and add all clin data
+        # search for matching gene names, and add all clin data
         # to working gvf file
         if ( $refInfo->{$gene} ) {
           $t->{'attribute'}->{'clin'}->{'Genomic_reference_sequence_identifier'} =
@@ -342,7 +248,7 @@ sub snpCheck {
             my $dbVar   = $rsMatch[4];
 
             # check for hets (i.e. A,T) in refs and var first
-            if ( $dataRef ne $dbRef) { next }
+            if ( length $dataRef ne length $dbRef) { next }
 
             my (@db, @data);
             if ( $dbVar =~ /\,/ ){
@@ -431,6 +337,12 @@ sub clinicalSig {
       255 => 'LA:LA6682-4', # other
     };
 
+    my $source_class = {
+     0 => 'LA:18197-6',
+     1 => 'LA:6683-2',
+     2 => 'LA:6684-0',
+    };
+
     # search for matches in gvf file.
     foreach my $i ( @{$data} ) {
         chomp $i;
@@ -441,8 +353,6 @@ sub clinicalSig {
         my $gvfEnd   = $i->{'end'};
         my $gvfRef   = $i->{'attribute'}->{'Reference_seq'};
         my $gvfVar   = $i->{'attribute'}->{'Variant_seq'};
-
-        my @variants = split/\,/, $gvfVar;
 
         # check the tabix file for matching regions
         my $iter = $tab->query( $gvfChr, $gvfStart - 1, $gvfEnd + 1 );
@@ -456,59 +366,72 @@ sub clinicalSig {
             # capture then check chr, ref, var for correct match
             my @fst8 = split /\t/, $tabReturn[0];
 
-            # match refs and find index.
-            my $refClin = $fst8[3];
-            unless ($refClin eq $gvfRef) { next }
-
+            # get var from clinvar file and check that ref are of equal size
             my $varClin = $fst8[4];
-            $varClin =~ s/\,//;
+            my $refClin = $fst8[3];
+            unless (length $refClin eq length $gvfRef) { next }
 
-            my $index;
-            foreach my $nt (@variants){
-              my $result = index($varClin, $nt);
-              ($result eq '0') ? $index = 0 :
-              ($result eq '1') ? $index = 1 : next;
+            my (@clin, @gvf);
+            if ( $varClin =~ /\,/ ){
+                @clin = split /\,/, $varClin;
             }
+            else { push @clin, $varClin }
 
-            my @clin_find;
-            foreach my $clin (@tabReturn) {
-              next unless ( $clin =~ /(CLNSIG|CLNDSDB|CLNDSDBID|CLNHGVS)/ );
-
-              $clin =~ /^(.*)=(.*)/g;
-              my $tag   = $1;
-              my $value = $2;
-
-
-              # working from here!!!!!!!!!
-
-              # check if more then one value, if not change index.
-              my @clinResults;
-              if ( $value =~ /\,/ ){
-                @clinResults = split /\,/, $value;
-              }
-              else {
-                push @clinResults, $value;
-                $index = 0;
-              }
-
-              if ( $tag eq 'CLNHGVS') {
-                next unless defined ($clinResults[$index]);
-                $i->{'attribute'}->{'clin'}->{'DNA_sequence_variation'} = "LOINC:48004-6 HGVS:$clinResults[$index]";
-              }
-              elsif ( $tag eq 'CLNSIG'){
-                # quick change the numbers into loinc value
-                $clinResults[0] =~ s/(\d+)/$sigLookup->{$1}/g;
-                push @clin_find, "LOINC=53037-8 $clinResults[0]";
-              }
-              elsif ( $tag eq 'CLNDSDBID') {
-                push @clin_find, @clinResults;
-              }
-              elsif ($tag eq 'CLNDSDB'){
-                push @clin_find, @clinResults;
-              }
+            if ( $gvfVar =~ /\,/ ){
+                @gvf = split /\,/, $gvfVar;
             }
-            my $clin_result = join(',', @clin_find) if scalar @clin_find >= 1;
-            $i->{'attribute'}->{'clin'}->{'Genetic_disease_analysis_variation_interpreation'} = $clin_result;
+            else { push @gvf, $gvfVar }
+
+            my %clinTable  = map { $_ => 1 } @clin;
+            my @matches = grep { $clinTable{$_} } @gvf;
+
+            if ( scalar @matches ) {
+              $varClin =~ s/\,//;
+              my $index = index($varClin, $matches[0]);
+
+              my @clin_find;
+              foreach my $clin (@tabReturn) {
+                #next unless ( $clin =~ /(CLNSIG|CLNDSDB|CLNDSDBID|CLNORIGIN)/ );
+                next unless ( $clin =~ /(CLNSIG|CLNDSDB|CLNDSDBID)/ );
+
+                $clin =~ /^(.*)=(.*)/g;
+                my $tag   = $1;
+                my $value = $2;
+
+                # check if more then one value, if not change index.
+                my @clinResults;
+                if ( $value =~ /\,/ ){
+                  @clinResults = split /\,/, $value;
+                }
+                else {
+                  push @clinResults, $value;
+                }
+                if ( $tag eq 'CLNSIG'){
+                  #next unless ($clinResults[$index]);
+                  # quick change the numbers into loinc value
+                  $clinResults[$index] =~ s/(\d+)/$sigLookup->{$1}/g;
+                  push @clin_find, "LOINC=53037-8 $clinResults[$index]";
+                }
+                elsif ( $tag eq 'CLNDSDBID') {
+                  #next unless ($clinResults[$index]);
+                  push @clin_find, $clinResults[$index];
+                }
+                elsif ($tag eq 'CLNDSDB'){
+                  #next unless ($clinResults[$index]);
+                  push @clin_find, $clinResults[$index];
+                }
+                # may use this for comparison to user entered data.
+#                elsif ( $tag eq 'CLNORIGIN'){
+#                  my $class = $clinResults[$index];
+#                  next unless ($class and $class =~ /(0|1|2)/);
+#                  $class =~ s/(\d+)/$source_class->{$1}/;
+#                  $i->{'attribute'}->{'clin'}->{'Genomic_source_class'} =
+#                    "LOINC=48002-0 $class";
+#                }
+              }
+              my $clin_result = join(',', @clin_find) if scalar @clin_find >= 1;
+              $i->{'attribute'}->{'clin'}->{'Genetic_disease_analysis_variation_interpreation'} = $clin_result;
+            }
           }
     }
     return $data;
@@ -630,13 +553,11 @@ sub hgvsDNACheck {
       insertion     => 1,
       indel         => 1,
       inversion     => 1,
+      ###complex_substitution => 1,
     };
 
     foreach my $i ( @{$data} ) {
         chomp $i;
-
-        # check if hgvs information is present.
-        next if ($i->{'attribute'}->{'clin'}->{'DNA_sequence_variation'});
 
         # need ref id to make HGVS notation.
         next unless ($i->{'attribute'}->{'clin'}->{'Genomic_reference_sequence_identifier'});
@@ -652,21 +573,36 @@ sub hgvsDNACheck {
         my $ref   = $i->{'attribute'}->{'Reference_seq'};
         my $type  = lc($i->{'type'});
 
+        if ($type eq 'complex_substitution') {
+          $type =~ s/complex_substitution/snv/;
+        }
+        if ( $type eq 'nucleotide_deletion') {
+          $type =~ s/nucleotide_deletion/deletion/;
+        }
+
         # skip if type is not one which is defined yet.
-        next unless ($soType->{$type});
+        if ( ! $soType->{$type} ) {
+          warn "{Clinomic} WARN: change type $type is not an accepted SO or HGVS type. HGVS annotation will not be added.\n";
+        }
 
         # get the index of the variant
         if ( $var =~ /\,/ ) { $var =~ s/\,// }
         my $pos = index($var, $ref);
 
-        # create the index of the variant from the index return of reference match
+        # create the index
         my $index;
         ($pos eq '0') ? $index  = 1 :
         ($pos eq '1') ? $index  = 0 :
-        ($pos eq '-1') ? $index = 0 : die "cannot index postion the variant\n$i\n";
+        ($pos eq '-1') ? $index = 0 : $index = 0;
 
         # just keep the correct index var to make hgvs.
         $var = substr $var, $index, 1;
+
+        # if ref or var is longer then 3bp, report length 
+        if ( length $ref > 3 or length $var > 3){
+          $ref = length $ref;
+          $var = length $var;
+        }
 
         if ( $type eq 'snv') {
             my $hgvsS = "$ref_id:g.$start$ref>$var";
@@ -764,43 +700,6 @@ sub hgvsProtCheck {
     }
     return $data;
 }
-##------------------------------------------------------------------------------
-
-sub _pragmas {
-    my $self = shift;
-
-    # grab only pragma lines
-    my $pragma_line = $self->_file_splitter('pragma');
-
-    my %p;
-    foreach my $i ( @{$pragma_line} ) {
-        chomp $i;
-
-        my ( $tag, $value ) = $i =~ /##(\S+)\s?(.*)$/g;
-        $tag =~ s/\-/\_/g;
-
-        $p{$tag} = [] unless exists $p{$tag};
-
-        # if value has multiple tag value pairs, split them.
-        if ( $value =~ /\=/ ) {
-            my @lines = split /;/, $value;
-
-            my %test;
-            map {
-                my ( $tag, $value ) = split /=/, $_;
-                $test{$tag} = $value;
-            } @lines;
-            $value = \%test;
-        }
-        push @{ $p{$tag} }, $value;
-    }
-
-    # check or add only required pragma.
-    if ( !exists $p{'gvf_version'} ) { $p{'gvf_version'} = [1.06] }
-
-    $self->set_pragmas( \%p );
-}
-
 ##------------------------------------------------------------------------------
 
 no Moose;

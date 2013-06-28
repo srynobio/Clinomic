@@ -136,8 +136,8 @@ sub feature_writer {
                 }
 
                 # remove last comma, and print line
-                $line =~ s/(.*)\,$/$1;/;
-                print $outFH $line;
+                $line =~ s/(.*)\,$/$1;/ if $line;
+                print $outFH $line if $line;
             }
             else {
                 print $outFH "$k2=$v2;" if $v2;

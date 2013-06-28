@@ -26,8 +26,8 @@ my $feature = $clin->gvfParser;
 
 my $gvfclin = $clin->gvfRelationBuild($feature);
 
+##print Dumper($gvfclin);
 
-print Dumper($gvfclin);
 # send clin data to be printed out as requested.
 #$clin->exporter($gvfclin);
 

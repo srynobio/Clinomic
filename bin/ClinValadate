@@ -1,0 +1,14 @@
+#!/usr/bin/perl
+# ClinValadate
+use strict;
+use warnings;
+use lib '/home/srynearson/Clinomic/lib';
+use Clinomic;
+use Bio::DB::Fasta;
+our ($VERSION) = '0.01';
+
+my $clin     = Clinomic->new_with_options();
+my $feature  = $clin->gvfParser;
+
+my $validate = $clin->gvfValadate($feature);
+

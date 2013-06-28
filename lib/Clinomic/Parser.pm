@@ -4,11 +4,6 @@ use Carp;
 use namespace::autoclean;
 use IO::File;
 
-
-
-
-
-
 ##-----------------------------------------------------------------------------
 ##------------------------------- Attributes ----------------------------------
 ##-----------------------------------------------------------------------------
@@ -21,7 +16,6 @@ has 'data_directory' => (
   writer  => 'set_directory',
   reader  => 'get_directory',
 );
-
 
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
@@ -86,6 +80,7 @@ sub refseq {
 
 sub gvfParser {
     my $self = shift;
+    warn "{Clinomic} Creating Data Structures\n";
 
     my $feature_line = $self->_file_splitter('feature');
 
@@ -105,7 +100,7 @@ sub gvfParser {
 
         next if ! $seq_id;
         if ($seq_id !~ /^chr/) {
-            die "{Clinomic} GVF feature lines must start with chr, please updated.\n";
+          die "{Clinomic} requires the feature lines of ", $self->file, " to begin with the notation chr\#\#.\n";
         }
 
         my %atts;
@@ -127,7 +122,42 @@ sub gvfParser {
         };
         push @return_list, $feature;
     }
-    return \@return_list;
+   return \@return_list;
+}
+#------------------------------------------------------------------------------
+
+sub _pragmas {
+  my $self = shift;
+
+  # grab only pragma lines
+  my $pragma_line = $self->_file_splitter('pragma');
+
+  my %p;
+  foreach my $i ( @{$pragma_line} ) {
+    chomp $i;
+
+    my ( $tag, $value ) = $i =~ /##(\S+)\s?(.*)$/g;
+    $tag =~ s/\-/\_/g;
+
+    $p{$tag} = [] unless exists $p{$tag};
+
+    # if value has multiple tag value pairs, split them.
+    if ( $value =~ /\=/ ) {
+      my @lines = split /;/, $value;
+
+      my %test;
+      map {
+        my ( $tag, $value ) = split /=/, $_;
+        $test{$tag} = $value;
+      } @lines;
+      $value = \%test;
+    }
+    push @{ $p{$tag} }, $value;
+  }
+
+  # check or add only required pragma.
+  if ( !exists $p{'gvf_version'} ) { $p{'gvf_version'} = [1.06] }
+  $self->set_pragmas( \%p );
 }
 #------------------------------------------------------------------------------
 
