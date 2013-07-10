@@ -68,21 +68,23 @@ sub exporter {
 sub pragma_writer {
 
   my $self = shift;
+  my $pragmas = $self->get_pragmas;
 
   # get the file name
   my $basename = basename( $self->get_file, ".gvf" );
-  my $outfile = "$basename" . '.gvfclin';
+  my $outfile  = "$basename" . '.gvfclin';
+  my $outFH    = IO::File->new( "$outfile", 'a+' );
 
-  my $outFH = IO::File->new( "$outfile", 'a+' );
+  # slice of start and end of pragma data, then remove it from hash.
+  my ($version, $seq_region) = @{$pragmas}{'gvf_version', 'sequence_region'};
+  delete $pragmas->{'gvf_version'};
+  delete $pragmas->{'sequence_region'};
 
-  # check for pragama values.
-  my $pragma;
-  if ( $self->has_pragmas ) {
-    $pragma = $self->get_pragmas;
-  }
+  # print version first.
+  print $outFH "##gvf-version $version->[0]\n";
 
   # print out pragma values.
-  while ( my ( $k, $v ) = each %{$pragma} ) {
+  while ( my ( $k, $v ) = each %{$pragmas} ) {
     $k =~ s/\_/\-/g;
     if ( ref $v->[0] ) {
       print $outFH "##$k ";
@@ -93,6 +95,12 @@ sub pragma_writer {
     }
     else { print $outFH "##$k " . $v->[0], "\n"; }
   }
+
+  # then print out sequence_region
+  map {
+    print $outFH "##sequence-region $_\n";
+  } @{$seq_region};
+
 }
 #-----------------------------------------------------------------------------
 
@@ -108,42 +116,43 @@ sub feature_writer {
     # print out in gvf format.
     foreach my $i ( @{$gvf} ) {
 
-        my $first8 = "$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t"
+      my $first8 = "$i->{'seqid'}\t$i->{'source'}\t$i->{'type'}\t"
           . "$i->{'start'}\t$i->{'end'}\t$i->{'score'}\t$i->{'strand'}\t.";
 
-        print $outFH "$first8\t";
+      print $outFH "$first8\t";
 
-        while ( my ( $k2, $v2 ) = each %{ $i->{'attribute'} } ) {
+      while ( my ( $k2, $v2 ) = each %{ $i->{'attribute'} } ) {
 
-            if ( $k2 eq 'clin' ) {
-                while ( my ( $k, $v ) = each %{$v2} ) {
-                    print $outFH "$k=$v;" if $v;
-                }
-            }
-            elsif ( $k2 eq 'Variant_effect' ) {
-                print $outFH "Variant_effect=";
-
-                my $line;
-                foreach ( @{$v2} ) {
-
-                    my $fields = join( ' ',
-                        $_->{'sequence_variant'}, $_->{'index'},
-                        $_->{'feature_type'},     $_->{'feature_id'} );
-
-                    # create one line seperated by comma.
-                    $line .= $fields;
-                    $line .= ',';
-                }
-
-                # remove last comma, and print line
-                $line =~ s/(.*)\,$/$1;/ if $line;
-                print $outFH $line if $line;
-            }
-            else {
-                print $outFH "$k2=$v2;" if $v2;
-            }
+        if ( $k2 eq 'clin' ) {
+          while ( my ( $k, $v ) = each %{$v2} ) {
+            print $outFH "$k=$v;" if $v;
+          }
         }
-        print $outFH "\n";
+        elsif ( $k2 eq 'Variant_effect' ) {
+          next unless (scalar @{$v2} > 0 );
+          print $outFH "Variant_effect=";
+
+          my $line;
+          foreach ( @{$v2} ) {
+
+            my $fields = join( ' ',
+            $_->{'sequence_variant'}, $_->{'index'},
+            $_->{'feature_type'},     $_->{'feature_id'} );
+
+            # create one line seperated by comma.
+            $line .= $fields;
+            $line .= ',';
+          }
+
+          # remove last comma, and print line
+          $line =~ s/(.*)\,$/$1;/ if $line;
+          print $outFH $line if $line;
+        }
+        else {
+          print $outFH "$k2=$v2;" if $v2;
+        }
+      }
+      print $outFH "\n";
     }
     $outFH->close;
 }

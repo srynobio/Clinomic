@@ -4,6 +4,13 @@ use strict;
 use IO::File;
 use Parallel::ForkManager;
 
+
+# if decide to add cosmic
+# ftp://anonymous@ngs.sanger.ac.uk/production/cosmic/CosmicCodingMuts_v65_28052013_noLimit.vcf.gz
+# Also look into adding drug_bank data http://www.drugbank.ca/downloads
+# SNOMED CT sub-list ftp://ftp1.nci.nih.gov/pub/cacore/EVS/FDA/ProblemList/ProblemListSubset.txt
+
+
 BEGIN {
   unless ( -d '../data' ) {
       `mkdir ../data`;

@@ -16,7 +16,7 @@ my @needed_dir = qw(../data/GFF ../data/dbSNP ../data/ClinVar
 BEGIN {
   foreach (@needed_dir) {
     unless ( -d $_ ) {
-      die "Directory $_ not found, have you ran ClinIndex?\n";
+      die "Directory $_ not found, have you ran ClinRefBuilder?\n";
     }
   }
 }
@@ -26,8 +26,6 @@ my $feature = $clin->gvfParser;
 
 my $gvfclin = $clin->gvfRelationBuild($feature);
 
-##print Dumper($gvfclin);
-
 # send clin data to be printed out as requested.
-#$clin->exporter($gvfclin);
+$clin->exporter($gvfclin);
 

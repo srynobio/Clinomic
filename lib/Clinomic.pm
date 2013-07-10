@@ -70,15 +70,30 @@ has 'pragma' => (
     isa       => 'HashRef',
     writer    => 'set_pragmas',
     reader    => 'get_pragmas',
-    predicate => 'has_pragmas',
 );
 
-has 'report_all' => (
+has 'report' => (
   is            => 'rw',
   isa           => 'Str',
-  predicate     => 'want_report',
+  reader        => 'get_report',
   default       => 'hgnc',
-  documentation => q|Report all variants from original file, not just HGNC/LOINC annotated. Default hgnc. Options=hgnc,all|,
+  documentation => q|Report all variants from original file, not just HGNC/LOINC annotated. Default hgnc. Options=hgnc, all|,
+);
+
+has 'cpu' => (
+  is  => 'rw',
+  isa => 'Int',
+  reader => 'get_cpu',
+  default => '1',
+  documentation => q|Will set the total number of CPUs to run processes on. Default is 1.|,
+);
+
+has 'tmp_dir' => (
+  is => 'rw',
+  isa => 'Str',
+  reader => 'get_tmpdir',
+  default => '.',
+  documentation => q|Set the temporary to write file to when using pClinomic. Default current directory.|,
 );
 
 ##-----------------------------------------------------------------------------
@@ -96,9 +111,9 @@ sub gvfRelationBuild {
   my $stp5 = $self->allelicStateCheck($stp4);
   my $stp6 = $self->hgvsDNACheck($stp5);
   my $stp7 = $self->regionFinder($stp6);
-  my $stp8 = $self->hgvsProtCheck($stp7);
+  #my $stp8 = $self->hgvsProtCheck($stp7);
 
-  return $stp8;
+  return $stp7;
 }
 ##-----------------------------------------------------------------------------
 
@@ -171,18 +186,12 @@ sub gvfGeneFind {
     ## This section removes any variants which have no gene match.
     ## Little reference witchcraft to try to keep speed and grep only Variant_effect with values.
     my @kept;
-    if ($self->want_report eq 'hgnc') {
+    if ($self->get_report eq 'hgnc') {
       my $updateGVF = \@updateGVF;
-      @kept =
-        grep { $_->{'attribute'}->{'Variant_effect'}->[0]->{'feature_type'} }
-        @{$updateGVF};
-      if ( scalar @kept == '0' ) {
-          die "no gene matches were found for your GVF file.\n";
-      }
+      @kept = grep { $_->{'attribute'}->{'Variant_effect'}->[0]->{'feature_type'} } @{$updateGVF};
     }
-
     # return one of the two
-    ($self->want_report eq 'all') ? return \@kept : \@updateGVF;
+    ($self->get_report eq 'hgnc') ? return \@kept : return \@updateGVF;
 }
 ##------------------------------------------------------------------------------
 
@@ -278,35 +287,34 @@ sub variantTypeCheck {
     warn "{Clinomic} Checking SO file.\n";
 
     my $so_table = {
-      deletion => "LOINC:48019-4 LA:LA6692-3",
-      deleted_sequence => "LOINC:48019-4 LA:LA6692-3",
-      nucleotide_deletion => "LOINC:48019-4 LA:LA6692-3",
-      copy_number_loss => "LOINC:48019-4 LA:LA6692-3",
-      indel => "LOINC:48019-4 LA:LA6688-1",
-      duplication => "LOINC:48019-4 LA:LA6686-5",
-      nucleotide_duplication => "LOINC:48019-4 LA:LA6686-5",
-      tandem_duplication => "LOINC:48019-4 LA:LA6686-5",
-      transgenic_duplication => "LOINC:48019-4 LA:LA6686-5",
-      copy_number_gain => "LOINC:48019-4 LA:LA6686-5",
-      insertion => "LOINC:48019-4 LA:LA6687-3",
-      nucleotide_insertion => "LOINC:48019-4 LA:LA6687-3",
-      transgenic_insertion => "LOINC:48019-4 LA:LA6687-3",
-      inversion => "LOINC:48019-4 LA:LA6689-9",
-      snv => "LOINC:48019-4 LA:LA6690-7",
-      mnp => "LOINC:48019-4 LA:LA6690-7",
-      snp => "LOINC:48019-4 LA:LA6690-7",
-      point_mutation => "LOINC:48019-4 LA:LA6690-7",
-      transition => "LOINC:48019-4 LA:LA6690-7",
-      transversion => "LOINC:48019-4 LA:LA6690-7",
-      complex_substitution => "LOINC:48019-4 LA:LA6690-7",
-      sequence_length_variation => "LOINC:48019-4 LA:LA6690-7",
+      deletion            => "LOINC:48019-4 deletion:LA6692-3",
+      deleted_sequence    => "LOINC:48019-4 deletion:LA6692-3",
+      nucleotide_deletion => "LOINC:48019-4 deletion:LA6692-3",
+      copy_number_loss    => "LOINC:48019-4 deletion:LA6692-3",
+      indel               => "LOINC:48019-4 insertion-deletion:LA6688-1",
+      duplication            => "LOINC:48019-4 duplication:LA6686-5",
+      nucleotide_duplication => "LOINC:48019-4 duplication:LA6686-5",
+      tandem_duplication     => "LOINC:48019-4 duplication:LA6686-5",
+      transgenic_duplication => "LOINC:48019-4 duplication:LA6686-5",
+      copy_number_gain       => "LOINC:48019-4 duplication:LA6686-5",
+      insertion              => "LOINC:48019-4 insertion:LA6687-3",
+      nucleotide_insertion   => "LOINC:48019-4 insertion:LA6687-3",
+      transgenic_insertion   => "LOINC:48019-4 insertion:LA6687-3",
+      inversion              => "LOINC:48019-4 inversion:LA6689-9",
+      snv                    => "LOINC:48019-4 substitution:LA6690-7",
+      mnp                    => "LOINC:48019-4 substitution:LA6690-7",
+      snp                    => "LOINC:48019-4 substitution:LA6690-7",
+      point_mutation         => "LOINC:48019-4 substitution:LA6690-7",
+      transition                => "LOINC:48019-4 substitution:LA6690-7",
+      transversion              => "LOINC:48019-4 substitution:LA6690-7",
+      complex_substitution      => "LOINC:48019-4 substitution:LA6690-7",
+      sequence_length_variation => "LOINC:48019-4 substitution:LA6690-7",
    };
 
     foreach my $i ( @{$data} ) {
         chomp $i;
         my $type = lc( $i->{'type'} );
 
-        #if ( $soMatch{$type} ) {
         if ( $so_table->{$type} ) {
             $i->{'attribute'}->{'clin'}->{'Amino_acid_change_type'} =
               $so_table->{$type};
@@ -324,23 +332,23 @@ sub clinicalSig {
     my $tab = Tabix->new( -data => $self->get_clin_tabix )
       || die "Cannot locate Clinvar Tabix file\n";
 
-      # LA: loinc answers then commented out Clinvar numbering system meanings.
-      my $sigLookup = {
-      0   => 'LA:LA6682-4', # unknown
-      1   => 'LA:LA6682-4', # untested
-      2   => 'LA:LA6675-8', # non-pathogenic
-      3   => 'LA:LA6674-1', # probable-non-pathogenic
-      4   => 'LA:LA6669-1', # probable-pathogenic
-      5   => 'LA:LA6668-3', # pathogenic
-      6   => 'LA:LA6682-4', # drug-response
-      7   => 'LA:LA6682-4', # histocompatibility
-      255 => 'LA:LA6682-4', # other
+    # LA: loinc answers then commented out Clinvar numbering system meanings.
+    my $sigLookup = {
+      0   => 'unknown:LA6682-4',
+      1   => 'unknown:LA6682-4',
+      2   => 'benign:LA6675-8',
+      3   => 'presumed_benign:LA6674-1',
+      4   => 'presumed_benign:LA6669-1',
+      5   => 'pathogenic:LA6668-3',
+      6   => 'unknown:LA6682-4',
+      7   => 'unknown:LA6682-4',
+      255 => 'unknown:LA6682-4',
     };
 
     my $source_class = {
-     0 => 'LA:18197-6',
-     1 => 'LA:6683-2',
-     2 => 'LA:6684-0',
+     0 => 'unknown:18197-6',
+     1 => 'germline:6683-2',
+     2 => 'somatic:6684-0',
     };
 
     # search for matches in gvf file.
@@ -391,7 +399,6 @@ sub clinicalSig {
 
               my @clin_find;
               foreach my $clin (@tabReturn) {
-                #next unless ( $clin =~ /(CLNSIG|CLNDSDB|CLNDSDBID|CLNORIGIN)/ );
                 next unless ( $clin =~ /(CLNSIG|CLNDSDB|CLNDSDBID)/ );
 
                 $clin =~ /^(.*)=(.*)/g;
@@ -420,14 +427,6 @@ sub clinicalSig {
                   #next unless ($clinResults[$index]);
                   push @clin_find, $clinResults[$index];
                 }
-                # may use this for comparison to user entered data.
-#                elsif ( $tag eq 'CLNORIGIN'){
-#                  my $class = $clinResults[$index];
-#                  next unless ($class and $class =~ /(0|1|2)/);
-#                  $class =~ s/(\d+)/$source_class->{$1}/;
-#                  $i->{'attribute'}->{'clin'}->{'Genomic_source_class'} =
-#                    "LOINC=48002-0 $class";
-#                }
               }
               my $clin_result = join(',', @clin_find) if scalar @clin_find >= 1;
               $i->{'attribute'}->{'clin'}->{'Genetic_disease_analysis_variation_interpreation'} = $clin_result;
@@ -443,11 +442,11 @@ sub allelicStateCheck {
   warn "{Clinomic} Checking allelic state.\n";
 
   my $answer = {
-    hemizygous    => "LOINC:53034-5 LA:LA6707-9",
-    heteroplasmic => "LOINC:53034-5 LA:LA6703-8",
-    homoplasmic   => "LOINC:53034-5 LA:LA6704-6",
-    heterozygous  => "LOINC:53034-5 LA:LA6706-1",
-    homozygous    => "LOINC:53034-5 LA:LA6705-3",
+    hemizygous    => "LOINC:53034-5 hemizygous:LA6707-9",
+    heteroplasmic => "LOINC:53034-5 heteroplasmic:LA6703-8",
+    homoplasmic   => "LOINC:53034-5 homoplasmic:LA6704-6",
+    heterozygous  => "LOINC:53034-5 heterozygous:LA6706-1",
+    homozygous    => "LOINC:53034-5 homozygous:LA6705-3",
   };
 
   foreach my $i ( @{$data} ) {
@@ -553,7 +552,6 @@ sub hgvsDNACheck {
       insertion     => 1,
       indel         => 1,
       inversion     => 1,
-      ###complex_substitution => 1,
     };
 
     foreach my $i ( @{$data} ) {

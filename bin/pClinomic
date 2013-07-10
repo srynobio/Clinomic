@@ -7,13 +7,13 @@ use Data::Dumper;
 my $clin = Clinomic->new_with_options();
 my $parsed = $clin->gvfParser;
 
-$MAX_PROCESSES = 10;
-my $pm = Parallel::ForkManager->new($MAX_PROCESSES, '.');
+$MAX_PROCESSES = $clin->get_cpu;
+$TMP_DIR       = $clin->get_tmpdir;
+my $pm         = Parallel::ForkManager->new($MAX_PROCESSES, $TMP_DIR);
 
 
-##########
-my %test;
-#########
+# collection of all retured regions.
+my %regions;
 
 my %chr;
 foreach my $refs (@{$parsed}){
@@ -28,7 +28,7 @@ $pm->run_on_finish (
     my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_ref) = @_;
 
     if (defined($data_ref)) {
-      push @{$test{$pid}}, ${$data_ref};
+      push @{$regions{$pid}}, ${$data_ref};
     }
     else { print qq|No message received from child process $pid!\n| }
   }
@@ -41,17 +41,13 @@ foreach my $feature (keys %chr) {
 }
 $pm->wait_all_children;
 
+
 $clin->pragma_writer();
-foreach my $proc (keys %test){
-  foreach (@{$test{$proc}} ) {
+foreach my $proc (keys %regions){
+  foreach (@{$regions{$proc}} ) {
     $clin->feature_writer($_);
   }
 }
-
-
-
-
-
 
 
 
