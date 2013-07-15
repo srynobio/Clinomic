@@ -3,7 +3,7 @@ use Moose;
 use Tabix;
 use IO::File;
 use File::Basename;
-
+##no warnings;
 use Data::Dumper;
 
 with 'Clinomic::Roles';
@@ -144,9 +144,9 @@ sub gvfGeneFind {
 
         # create the index
         my $index;
-        ($pos eq '0') ? $index  = 1 :
-        ($pos eq '1') ? $index  = 0 :
-        ($pos eq '-1') ? $index = 0 : $index = 0;
+        ($pos == '0') ? $index  = 1 :
+        ($pos == '1') ? $index  = 0 :
+        ($pos == '-1') ? $index = 0 : $index = 0;
 
         # check the tabix file for matching regions
         my $iter = $tab->query( $chr, $start - 1, $end + 1 );
@@ -256,8 +256,9 @@ sub snpCheck {
             my $dbRef   = $rsMatch[3];
             my $dbVar   = $rsMatch[4];
 
-            # check for hets (i.e. A,T) in refs and var first
-            if ( length $dataRef ne length $dbRef) { next }
+            # check if reference are the same.
+            if ($dbRef ne $dataRef) { next }
+
 
             my (@db, @data);
             if ( $dbVar =~ /\,/ ){
@@ -583,24 +584,25 @@ sub hgvsDNACheck {
           warn "{Clinomic} WARN: change type $type is not an accepted SO or HGVS type. HGVS annotation will not be added.\n";
         }
 
+        # collect the hets for insertion
+        my (@var_seq, @gvf);
+        if ( $var =~ /\,/ ){
+          @var_seq = split /\,/, $var;
+        }
+        else { push @var_seq, $var }
+
         # get the index of the variant
         if ( $var =~ /\,/ ) { $var =~ s/\,// }
         my $pos = index($var, $ref);
 
         # create the index
         my $index;
-        ($pos eq '0') ? $index  = 1 :
-        ($pos eq '1') ? $index  = 0 :
-        ($pos eq '-1') ? $index = 0 : $index = 0;
+        if    ($pos == 0)  { $index = 1 }
+        elsif ($pos == 1)  { $index = 0 }
+        elsif ($pos == -1) { $index = 0 }
 
         # just keep the correct index var to make hgvs.
         $var = substr $var, $index, 1;
-
-        # if ref or var is longer then 3bp, report length 
-        if ( length $ref > 3 or length $var > 3){
-          $ref = length $ref;
-          $var = length $var;
-        }
 
         if ( $type eq 'snv') {
             my $hgvsS = "$ref_id:g.$start$ref>$var";
@@ -615,7 +617,7 @@ sub hgvsDNACheck {
             $i->{'attribute'}->{'clin'}->{'DNA_sequence_variation'} = "LOINC:48004-6 HGVS:$hgvsDp";
         }
         elsif ( $type eq 'insertion' ) {
-            my $hgvsIn = "$ref_id:g.$start" . "_" . "$end" . "ins$var";
+            my $hgvsIn = "$ref_id:g.$start" . "_" . "$end" . "ins$var_seq[$index]";
             $i->{'attribute'}->{'clin'}->{'DNA_sequence_variation'} = "LOINC:48004-6 HGVS:$hgvsIn";
         }
         elsif ( $type eq 'indel' ) {
@@ -670,9 +672,9 @@ sub hgvsProtCheck {
 
         # create the index of the variant from the index return of reference match
         my $index;
-        ($pos eq '0') ? $index  = 1 :
-        ($pos eq '1') ? $index  = 0 :
-        ($pos eq '-1') ? $index = 0 : die "cannot index postion the variant\n";
+        ($pos == '0') ? $index  = 1 :
+        ($pos == '1') ? $index  = 0 :
+        ($pos == '-1') ? $index = 0 : die "cannot index postion the variant\n";
 
         # just keep the correct index var to make hgvs.
         my $var = substr $vAA, $pos, 1;

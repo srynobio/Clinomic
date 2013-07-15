@@ -4,6 +4,18 @@ use Clinomic;
 use Parallel::ForkManager;
 use Data::Dumper;
 
+
+# Check if needed dir are present.
+my @needed_dir = qw(../data/GFF ../data/dbSNP ../data/ClinVar ../data/NCBI ../data/GTF);
+
+BEGIN {
+  foreach (@needed_dir) {
+    unless ( -d $_ ) {
+      die "Directory $_ not found, have you ran ClinRefBuilder?\n";
+    }
+  }
+}
+
 my $clin = Clinomic->new_with_options();
 my $parsed = $clin->gvfParser;
 

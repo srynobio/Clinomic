@@ -6,32 +6,10 @@ use File::Find;
 use IO::File;
 use Carp;
 
-####
 use Data::Dumper;
 
 #------------------------------------------------------------------------------
 #----------------------------- Methods ----------------------------------------
-#------------------------------------------------------------------------------
-
-#sub _aliasDNACheck {
-#    my ( $self, $alias ) = @_;
-#
-#    if ( $alias =~ /\,/ ) {
-#        ### ???????????????
-#        my @hgvs = split /\,/, $alias;
-#    }
-#
-#    elsif ( $alias =~ /HGVS/ ) {
-#        my ( $tag, $value ) = split( /:/, $alias, 2 );
-#
-#        if ( $value =~ /\:c/ || $value =~ /\:g/ || $value =~ /\:m/ ) {
-#            $value =~ s/\s+//;
-#            ####print $value, "\n";
-#
-#        }
-#    }
-#}
-
 #------------------------------------------------------------------------------
 
 sub aaSLC3Letter {
@@ -77,7 +55,7 @@ sub gvfValadate {
     my ( $self, $data ) = @_;
     warn "{Clinomic} Valadating GVF file.\n";
 
-    use Bio::DB::Fasta;
+    require Bio::DB::Fasta;
 
     #db handle and indexing fasta file .
     my $db = Bio::DB::Fasta->new( $self->get_fasta, -debug => 1 )
@@ -146,3 +124,4 @@ RESULTS: %s matches %5.2f%% to reference.\n\n", $self->get_file, $value );
 
 no Moose;
 1;
+
