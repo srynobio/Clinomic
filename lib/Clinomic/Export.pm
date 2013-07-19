@@ -3,7 +3,6 @@ use Moose::Role;
 use IO::File;
 use File::Basename;
 use XML::Generator;
-
 use Data::Dumper;
 
 with 'MooseX::Getopt';

@@ -3,7 +3,6 @@ use Moose;
 use Tabix;
 use IO::File;
 use File::Basename;
-##no warnings;
 use Data::Dumper;
 
 with 'Clinomic::Roles';
@@ -317,7 +316,7 @@ sub variantTypeCheck {
         my $type = lc( $i->{'type'} );
 
         if ( $so_table->{$type} ) {
-            $i->{'attribute'}->{'clin'}->{'Amino_acid_change_type'} =
+            $i->{'attribute'}->{'clin'}->{'DNA_sequence_change_type'} =
               $so_table->{$type};
         }
     }
@@ -418,7 +417,7 @@ sub clinicalSig {
                   #next unless ($clinResults[$index]);
                   # quick change the numbers into loinc value
                   $clinResults[$index] =~ s/(\d+)/$sigLookup->{$1}/g;
-                  push @clin_find, "LOINC=53037-8 $clinResults[$index]";
+                  push @clin_find, "LOINC:53037-8 $clinResults[$index]";
                 }
                 elsif ( $tag eq 'CLNDSDBID') {
                   #next unless ($clinResults[$index]);
@@ -534,7 +533,7 @@ sub regionFinder {
         # add data to gvf reference
         if ($clinRegion) {
             $clinRegion =~ s/\,$//g;
-            $i->{'attribute'}->{'clin'}->{'DNA_region_name'} = "47999-8:$clinRegion";
+            $i->{'attribute'}->{'clin'}->{'DNA_region_name'} = "LOINC:47999-8 region:$clinRegion";
         }
     }
     return ($data);
@@ -664,8 +663,6 @@ sub hgvsProtCheck {
         next unless ($vCode or $vAA and $rCode or $rAA);
         next unless ($soType->{$type});
 
-
-
         # get the index of the variant
         if ( $vAA =~ /\,/ ) { $vAA =~ s/\,// }
         my $pos = index($vAA, $rAA);
@@ -695,8 +692,6 @@ sub hgvsProtCheck {
           ###$line .= "$genoRef:g.$refName$start" . "_" . "$varName$end" . "ins," unless $sameSeq eq 0;
         }
         #$i->{'attribute'}->{'clin'}->{'Clin_HGVS_protein'} = $line;
-
-
     }
     return $data;
 }

@@ -10,7 +10,6 @@ use Parallel::ForkManager;
 # Also look into adding drug_bank data http://www.drugbank.ca/downloads
 # SNOMED CT sub-list ftp://ftp1.nci.nih.gov/pub/cacore/EVS/FDA/ProblemList/ProblemListSubset.txt
 
-
 BEGIN {
   unless ( -d '../data' ) {
       `mkdir ../data`;

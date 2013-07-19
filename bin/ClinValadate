@@ -11,4 +11,3 @@ my $clin     = Clinomic->new_with_options();
 my $feature  = $clin->gvfParser;
 
 my $validate = $clin->gvfValadate($feature);
-
